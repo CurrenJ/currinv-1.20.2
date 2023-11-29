@@ -1,0 +1,23 @@
+Welcome to Curren's notes, strange traveller! It's 2023, 11:51 PM in Peckham, London, and I am eating a bowl of moussaka while I type this.
+
+Notes:
+- Client only mod means we can only really use classes that are client only, as marked by the @Environment annotation.
+- For example, mixins that we add to LootableContainerBlockEntity will not be run when connected to a server, because the block entity logic lives on the server.
+- Also, our mod's classes should be marked client only as well. Don't forget!
+- Remember to drink water! I am going to do that now. And sleep, bro. The code ain't going anywhere.
+
+- HandledScreen has mouse click logic for chests, which slot is clicked, etc.
+- Makes calls to MinecraftClient.ClientPlayerInteractionManager <-- I've a feeling this is our white whale.
+
+Relevant Classes:
+- GenericContainerScreen
+
+
+
+//
+In addition to capturing the target method arguments, it may be desirable to capture locally-scoped variables from the target method at the point of injection. This is usually executed in two stages:
+Set the locals() value of your injection to LocalCapture.PRINT and run the application.
+When the injector is processed, a listing of the LVT is produced accompanied by a generated signature for your handler method including the discovered args. Modify your handler signature accordingly.
+
+
+BlockPos{x=213, y=68, z=54} | BlockPos{x=212, y=68, z=54}
