@@ -3,10 +3,9 @@ package grill24.currinv.command;
 import com.mojang.brigadier.context.CommandContext;
 import grill24.currinv.CurrInvClient;
 import net.minecraft.client.MinecraftClient;
-import net.minecraft.client.gui.screen.Screen;
 
-public class QuickStackToggle extends Feature {
-    public QuickStackToggle() {
+public class QuickStackFeature extends ScreenTickingFeature {
+    public QuickStackFeature() {
         super("quickStack", true);
     }
 
@@ -19,4 +18,7 @@ public class QuickStackToggle extends Feature {
         super.setEnabled(commandContext, isEnabled);
         CurrInvClient.sorter.isQuickStackEnabled = isEnabled;
     }
+
+    @Override
+    public void onUpdate(ScreenTickingFeatureDto args) {}
 }
