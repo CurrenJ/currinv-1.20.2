@@ -3,7 +3,6 @@
 	"package": "grill24.currinv.mixin",
 	"compatibilityLevel": "JAVA_17",
 	"mixins": [
-		"ExampleMixin"
 	],
 	"injectors": {
 		"defaultRequire": 1
