@@ -15,7 +15,6 @@ import java.util.Optional;
 public class PlayerNavigator implements IClientPlayerController {
 
     private static final int MAX_MARKER_SEARCH_RADIUS = 512;
-    public boolean shouldStartNavigation;
 
     AStarAsyncMinecraft pathfinder;
 
@@ -35,6 +34,8 @@ public class PlayerNavigator implements IClientPlayerController {
     {
         return navigationData != null && navigationData.isNavigating();
     }
+
+    public boolean isSearchingForPath() { return pathfinder != null && pathfinder.isStarted() && !pathfinder.isFinished(); }
 
 
     public void onUpdate(ClientWorld world, ClientPlayerEntity player)

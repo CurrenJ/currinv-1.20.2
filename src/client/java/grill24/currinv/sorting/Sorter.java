@@ -2,7 +2,6 @@ package grill24.currinv.sorting;
 
 import grill24.currinv.IDirtyFlag;
 import net.minecraft.client.MinecraftClient;
-import net.minecraft.client.gui.screen.ingame.GenericContainerScreen;
 import net.minecraft.client.gui.screen.ingame.HandledScreen;
 import net.minecraft.inventory.Inventory;
 import net.minecraft.item.Item;
@@ -50,7 +49,7 @@ public class Sorter implements IDirtyFlag
         orderedStock.sort(Collections.reverseOrder());
     }
 
-    public <T extends ScreenHandler> void OnUpdate(MinecraftClient client, HandledScreen<T> screen, Inventory screenInventory)
+    public <T extends ScreenHandler> void onUpdate(MinecraftClient client, HandledScreen<T> screen, Inventory screenInventory)
     {
         tryInventoryInventory(screenInventory);
 
