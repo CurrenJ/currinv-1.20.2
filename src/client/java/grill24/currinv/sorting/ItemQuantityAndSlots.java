@@ -1,24 +1,30 @@
 package grill24.currinv.sorting;
 
 import net.minecraft.item.Item;
+import net.minecraft.util.math.BlockPos;
 import org.jetbrains.annotations.NotNull;
 
+import java.lang.reflect.Array;
 import java.util.ArrayList;
+import java.util.HashMap;
 
 //
 public class ItemQuantityAndSlots implements Comparable<ItemQuantityAndSlots> {
     public Item item;
     public int quantity;
-    public ArrayList<Integer> slotIds;
+    public HashMap<BlockPos, ArrayList<Integer>> slotIds;
 
     public ItemQuantityAndSlots(Item item) {
         this.item = item;
         quantity = 0;
-        slotIds = new ArrayList<>();
+        slotIds = new HashMap<>();
     }
 
-    public void addSlotId(int slotId) {
-        slotIds.add(slotId);
+    public void addSlotId(BlockPos blockPos, int slotId) {
+        if(slotIds.containsKey(blockPos))
+            slotIds.get(blockPos).add(slotId);
+        else
+            slotIds.put(blockPos, new ArrayList<>() {{ add(slotId); }});
     }
 
     public void incrementQuantity(int amount) {
@@ -26,9 +32,12 @@ public class ItemQuantityAndSlots implements Comparable<ItemQuantityAndSlots> {
     }
 
     public String toString() {
-        StringBuilder str = new StringBuilder(item.getName().getString() + ": " + quantity + " [ ");
-        for (int slotId : slotIds) {
-            str.append(slotId).append(" ");
+        StringBuilder str = new StringBuilder().append(item.getName().getString()).append(" (").append(quantity).append("): ");
+        for(var item : slotIds.entrySet()) {
+            str.append(item.getKey()).append(": [ ");
+            for (int slotId : item.getValue()) {
+                str.append(slotId).append(" ");
+            }
         }
         str.append("]");
         return str.toString();

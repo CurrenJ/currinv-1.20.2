@@ -4,7 +4,6 @@ import net.minecraft.client.network.ClientPlayerEntity;
 import net.minecraft.client.option.GameOptions;
 import net.minecraft.client.world.ClientWorld;
 import org.joml.Vector2d;
-import org.spongepowered.asm.mixin.Unique;
 
 public abstract class ClientPlayerController implements IClientPlayerController {
 
@@ -31,13 +30,9 @@ public abstract class ClientPlayerController implements IClientPlayerController 
 
     protected float angleLerp(float a, float b, float t)
     {
-        float normalizedA = normalizeAngle(a);
-        float normalizedB = normalizeAngle(b);
-        return normalizeAngle(normalizedA + (normalizeAngle(normalizedB - normalizedA) * t));
-    }
-
-    protected float normalizeAngle(float yaw) {
-        return (yaw + 180) % 360 - 180;
+        float normalizedA = NavigationUtility.normalizeAngle(a);
+        float normalizedB = NavigationUtility.normalizeAngle(b);
+        return NavigationUtility.normalizeAngle(normalizedA + (NavigationUtility.normalizeAngle(normalizedB - normalizedA) * t));
     }
 
     public boolean isMovementKeyPressed(GameOptions settings)

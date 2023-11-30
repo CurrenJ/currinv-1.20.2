@@ -42,22 +42,6 @@ public class SortingFeature extends ScreenTickingFeature {
             @Override
             public void onPropertyUpdate(ScreenHandler handler, int property, int value) {}
         });
-        Optional<Inventory> screenInventory = TryGetInventoryFromScreen(handledScreen);
-        screenInventory.ifPresent(inventory -> CurrInvClient.sorter.onUpdate(args.client(), handledScreen, inventory));
-    }
-
-    private static <T extends ScreenHandler> Optional<Inventory> TryGetInventoryFromScreen(HandledScreen<T> screen)
-    {
-        if(screen instanceof GenericContainerScreen)
-        {
-            return Optional.of(((GenericContainerScreen) screen).getScreenHandler().getInventory());
-        }
-        if(screen instanceof ShulkerBoxScreen)
-        {
-            ShulkerBoxScreenHandler shulkerBoxScreenHandler = ((ShulkerBoxScreen) screen).getScreenHandler();
-            ScreenWithInventory screenWithInventory = ((ScreenWithInventory) shulkerBoxScreenHandler);
-            return Optional.of(screenWithInventory.currinv_1_20_2$getInventory());
-        }
-        return Optional.empty();
+        CurrInvClient.sorter.onUpdate(args.client(), handledScreen);
     }
 }

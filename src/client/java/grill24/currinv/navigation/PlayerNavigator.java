@@ -26,6 +26,7 @@ public class PlayerNavigator implements IClientPlayerController {
 
     public ClientPlayerController playerController;
 
+
     public PlayerNavigator()
     {
     }

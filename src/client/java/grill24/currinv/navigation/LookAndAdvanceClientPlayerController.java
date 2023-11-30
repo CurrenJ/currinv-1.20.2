@@ -5,7 +5,6 @@ import net.minecraft.block.Blocks;
 import net.minecraft.client.network.ClientPlayerEntity;
 import net.minecraft.client.option.GameOptions;
 import net.minecraft.client.world.ClientWorld;
-import net.minecraft.fluid.Fluids;
 import net.minecraft.registry.tag.FluidTags;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.Vec3d;
@@ -20,6 +19,7 @@ public class LookAndAdvanceClientPlayerController extends ClientPlayerController
     public boolean isNextNodeBelowPlayer;
 
     public float movementSpeedForward;
+
 
 
     public LookAndAdvanceClientPlayerController(NavigationData navigationData) {
@@ -68,10 +68,10 @@ public class LookAndAdvanceClientPlayerController extends ClientPlayerController
         boolean shouldAscendOnLadder = world.getBlockState(currentNode).getBlock().equals(Blocks.LADDER) && nextNode.getY() > player.getPos().getY();
 
         // Weird logic for specific cave escaping
-        boolean isDiagonal = !Node.isDirectlyAdjacent(currentNode, nextNode);
+        boolean isDiagonal = !NavigationUtility.isDirectlyAdjacent(currentNode, nextNode);
         if(isDiagonal) {
-            boolean isPitfall = Node.hasSpaceForPlayerAboveBlockPos(world, player, new BlockPos(currentNode.getX(), currentNode.down().getY(), nextNode.getZ())) ||
-                    Node.hasSpaceForPlayerAboveBlockPos(world, player, new BlockPos(nextNode.getX(), currentNode.down().getY(), currentNode.getZ()));
+            boolean isPitfall = NavigationUtility.hasSpaceForPlayerToStandAtBlockPos(world, player, new BlockPos(currentNode.getX(), currentNode.down().getY(), nextNode.getZ())) ||
+                    NavigationUtility.hasSpaceForPlayerToStandAtBlockPos(world, player, new BlockPos(nextNode.getX(), currentNode.down().getY(), currentNode.getZ()));
             if(isPitfall) {
                 boolean diagonalPitfallShouldJump = !player.getBlockPos().equals(navigationData.getCurrentNode());
                 nextNodeIsAbove = nextNodeIsAbove && diagonalPitfallShouldJump;

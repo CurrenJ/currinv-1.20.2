@@ -3,13 +3,8 @@ package grill24.currinv.navigation;
 import net.minecraft.block.*;
 import net.minecraft.client.network.ClientPlayerEntity;
 import net.minecraft.client.world.ClientWorld;
-import net.minecraft.entity.ai.pathing.NavigationType;
-import net.minecraft.fluid.Fluids;
-import net.minecraft.registry.tag.BlockTags;
 import net.minecraft.registry.tag.FluidTags;
-import net.minecraft.registry.tag.TagKey;
 import net.minecraft.util.math.BlockPos;
-import net.minecraft.util.math.Direction;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -85,90 +80,24 @@ public class Node {
 
     private static void addNeighborIfEligible(ClientWorld world, ClientPlayerEntity player, BlockPos searchOrigin, BlockPos pos, BlockPos neighborPos, List<Node> neighbors) {
         if (searchOrigin.isWithinDistance(neighborPos, MAX_SEARCH_RADIUS)) {
-            if (canPlayerMoveBetween(world, player, pos, neighborPos)) {
+            if (NavigationUtility.canPlayerMoveBetween(world, player, pos, neighborPos)) {
                 // Check downwards (up to fall damage dist)
                 int y = 0;
                 BlockPos neighbor = neighborPos;
-                while (!canPlayerStandOnBlockBelow(world, player, neighbor) && canPathfindThrough(world, neighbor) && y > -3) {
+                while (!NavigationUtility.canPlayerStandOnBlockBelow(world, player, neighbor) && NavigationUtility.canPathfindThrough(world, neighbor) && y > -3) {
                     neighbor = neighbor.down();
                     y--;
                 }
 
-                if (canPlayerStandOnBlockBelow(world, player, neighbor) && canPathfindThrough(world, neighbor))
+                if (NavigationUtility.canPlayerStandOnBlockBelow(world, player, neighbor) && NavigationUtility.canPathfindThrough(world, neighbor))
                     neighbors.add(new Node(neighbor));
             } else {
                 // Check upwards (1 block up)
                 BlockPos neighbor = neighborPos.up();
-                if (canPlayerMoveBetween(world, player, pos, neighbor) && canPlayerStandOnBlockBelow(world, player, neighbor))
+                if (NavigationUtility.canPlayerMoveBetween(world, player, pos, neighbor) && NavigationUtility.canPlayerStandOnBlockBelow(world, player, neighbor))
                     neighbors.add(new Node(neighbor));
             }
         }
-    }
-
-    private static boolean canPlayerStandOnBlockBelow(ClientWorld world, ClientPlayerEntity player, BlockPos pos) {
-        return world.getBlockState(pos.down()).hasSolidTopSurface(world, pos, player)
-                || world.getBlockState(pos.down()).getBlock() instanceof StairsBlock
-                || world.getBlockState(pos.down()).getBlock() instanceof SlabBlock
-                || world.getBlockState(pos).getFluidState().isIn(FluidTags.WATER)
-                || world.getBlockState(pos).isIn(BlockTags.CLIMBABLE)
-                || world.getBlockState(pos.down()).getBlock().equals(Blocks.DIRT_PATH);
-    }
-
-    private static boolean canPlayerMoveBetween(ClientWorld world, ClientPlayerEntity player, BlockPos from, BlockPos to) {
-        boolean spaceForPlayerAboveToPos = hasSpaceForPlayerAboveBlockPos(world, player, to);
-        if (to.getY() <= from.getY()) {
-            if (isDirectlyAdjacent(from, to)) {
-                return spaceForPlayerAboveToPos;
-            } else {
-                BlockPos diagonal1 = new BlockPos(from.getX(), from.getY(), to.getZ());
-                BlockPos diagonal2 = new BlockPos(to.getX(), to.getY(), from.getZ());
-                boolean noLava = isNotLava(world, diagonal1) && isNotLava(world, diagonal1.up())
-                        && isNotLava(world, diagonal2) && isNotLava(world, diagonal2.up());
-                return spaceForPlayerAboveToPos && noLava
-                        && (hasSpaceForPlayerAboveBlockPos(world, player, diagonal1)
-                        || hasSpaceForPlayerAboveBlockPos(world, player, diagonal2));
-            }
-        } else if (to.getY() == from.getY() + 1) {
-            boolean canJumpTo = canPathfindThrough(world, from.up(2));
-            if (isDirectlyAdjacent(from, to)) {
-                return spaceForPlayerAboveToPos && canJumpTo;
-            } else {
-                BlockPos diagonal1 = new BlockPos(from.getX(), to.getY(), to.getZ());
-                BlockPos diagonal2 = new BlockPos(to.getX(), to.getY(), from.getZ());
-                boolean noLava = isNotLava(world, diagonal1) && isNotLava(world, diagonal1.up()) && isNotLava(world, diagonal1.up().up())
-                        && isNotLava(world, diagonal2) && isNotLava(world, diagonal2.up()) && isNotLava(world, diagonal2.up().up());
-                return spaceForPlayerAboveToPos && canJumpTo && noLava
-                        && (hasSpaceForPlayerAboveBlockPos(world, player, diagonal1)
-                        || hasSpaceForPlayerAboveBlockPos(world, player, diagonal2));
-            }
-        }
-        return false;
-    }
-
-    public static boolean hasSpaceForPlayerAboveBlockPos(ClientWorld world, ClientPlayerEntity player, BlockPos blockPos) {
-        return (canPathfindThrough(world, blockPos) || world.getBlockState(blockPos).getBlock() instanceof CarpetBlock) && canPathfindThrough(world, blockPos.up());
-    }
-
-    public static boolean isNotLava(ClientWorld world, BlockPos pos)
-    {
-        return !world.getBlockState(pos).getFluidState().isIn(FluidTags.LAVA);
-    }
-
-    public static boolean isDirectlyAdjacent(BlockPos from, BlockPos to) {
-        return from.getX() == to.getX() || from.getZ() == to.getZ();
-    }
-
-    private static boolean canPathfindThrough(ClientWorld world, BlockPos pos) {
-        BlockState blockState = world.getBlockState(pos);
-        boolean landNav = blockState.canPathfindThrough(world, pos, NavigationType.LAND);
-        // Navigate through water but not waterlogged blocks
-        boolean waterNav = blockState.canPathfindThrough(world, pos, NavigationType.WATER) && blockState.getCollisionShape(world, pos).isEmpty();
-        boolean notLava = !blockState.getBlock().equals(Blocks.LAVA);
-
-        // Breaks on carpets - better code here!
-        boolean noCollision = blockState.getCollisionShape(world, pos).isEmpty();
-
-        return (landNav || waterNav) && notLava;
     }
 
     public int getWeight(ClientWorld world) {

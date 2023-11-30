@@ -20,7 +20,7 @@ public class CurrInvCommandRegistry {
 
     public static final Feature SORTING_TOGGLE = new SortingFeature();
     public static final Feature QUICK_STACK_TOGGLE = new QuickStackFeature();
-    public static final Feature INVENTORY_SURROUNDING_CONTAINERS_FEATURE = new InventorySurroundingContainersFeature();
+    public static final Feature FULL_SUITE_SORT = new FullSuiteSortingFeature();
 
     public static final List<Feature> FEATURES;
     public static final List<ClientTickingFeature> CLIENT_TICKING_FEATURES;
@@ -36,7 +36,7 @@ public class CurrInvCommandRegistry {
 
         registerFeature(SORTING_TOGGLE);
         registerFeature(QUICK_STACK_TOGGLE);
-        registerFeature(INVENTORY_SURROUNDING_CONTAINERS_FEATURE);
+        registerFeature(FULL_SUITE_SORT);
     }
 
     private static void registerFeature(Feature feature) {
