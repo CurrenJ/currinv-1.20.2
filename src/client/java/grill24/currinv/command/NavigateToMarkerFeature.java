@@ -2,6 +2,7 @@ package grill24.currinv.command;
 
 import com.mojang.brigadier.context.CommandContext;
 import grill24.currinv.CurrInvClient;
+import grill24.currinv.command.ticking.ClientTickingFeature;
 import grill24.currinv.navigation.PlayerNavigator;
 import net.minecraft.client.MinecraftClient;
 

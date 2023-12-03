@@ -12,7 +12,7 @@ public class NavigationData {
     private static final double HORIZONTAL_DISTANCE_THRESHOLD = 0.4;
     private static final double VERTICAL_DISTANCE_THRESHOLD = 1e0;
     private static final long IS_LOST_TIMEOUT_MS = 5000;
-    private List<BlockPos> path;
+    private final List<BlockPos> path;
     private int currentPathNodeIndex;
     private long timeArrivedAtCurrentNode;
     private boolean hasArrivedAtDestination;
@@ -48,10 +48,10 @@ public class NavigationData {
         return hasArrivedAtDestination;
     }
 
-    BlockPos getNextNode() {
+    public BlockPos getNextNode() {
         return path.get(currentPathNodeIndex + 1);
     }
-    BlockPos getCurrentNode() { return path.get(currentPathNodeIndex); }
+    public BlockPos getCurrentNode() { return path.get(currentPathNodeIndex); }
 
     private boolean hasArrivedAtNextNode(ClientPlayerEntity player) {
 //        System.out.println("target: " + getNextNode().toCenterPos() + " | " + "player: " + player.getPos());
@@ -103,5 +103,13 @@ public class NavigationData {
 
     public boolean isNavigating() {
         return !hasArrivedAtDestination;
+    }
+
+    public List<BlockPos> getPath() {
+        return path;
+    }
+
+    public int getCurrentPathNodeIndex() {
+        return currentPathNodeIndex;
     }
 }

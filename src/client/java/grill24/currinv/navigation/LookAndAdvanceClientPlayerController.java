@@ -67,14 +67,21 @@ public class LookAndAdvanceClientPlayerController extends ClientPlayerController
         boolean shouldAscendInWater = isInWater && nextNode.getY() > player.getPos().getY();
         boolean shouldAscendOnLadder = world.getBlockState(currentNode).getBlock().equals(Blocks.LADDER) && nextNode.getY() > player.getPos().getY();
 
-        // Weird logic for specific cave escaping
         boolean isDiagonal = !NavigationUtility.isDirectlyAdjacent(currentNode, nextNode);
         if(isDiagonal) {
-            boolean isPitfall = NavigationUtility.hasSpaceForPlayerToStandAtBlockPos(world, player, new BlockPos(currentNode.getX(), currentNode.down().getY(), nextNode.getZ())) ||
-                    NavigationUtility.hasSpaceForPlayerToStandAtBlockPos(world, player, new BlockPos(nextNode.getX(), currentNode.down().getY(), currentNode.getZ()));
-            if(isPitfall) {
-                boolean diagonalPitfallShouldJump = !player.getBlockPos().equals(navigationData.getCurrentNode());
-                nextNodeIsAbove = nextNodeIsAbove && diagonalPitfallShouldJump;
+            if(!nextNodeIsAbove){
+                // Logic for jumping over diagonal waist-high "hurdles"
+                BlockPos diagonal1 = new BlockPos(currentNode.getX(), currentNode.getY(), nextNode.getZ());
+                BlockPos diagonal2 = new BlockPos(nextNode.getX(), nextNode.getY(), currentNode.getZ());
+                nextNodeIsAbove = !NavigationUtility.canPathfindThrough(world, diagonal1) && !NavigationUtility.canPathfindThrough(world, diagonal2);
+            } else {
+                // Weird logic for specific cave escaping
+                boolean isPitfall = NavigationUtility.hasSpaceForPlayerToStandAtBlockPos(world, player, new BlockPos(currentNode.getX(), currentNode.down().getY(), nextNode.getZ())) ||
+                        NavigationUtility.hasSpaceForPlayerToStandAtBlockPos(world, player, new BlockPos(nextNode.getX(), currentNode.down().getY(), currentNode.getZ()));
+                if (isPitfall) {
+                    boolean diagonalPitfallShouldJump = !player.getBlockPos().equals(navigationData.getCurrentNode());
+                    nextNodeIsAbove = diagonalPitfallShouldJump;
+                }
             }
         }
 

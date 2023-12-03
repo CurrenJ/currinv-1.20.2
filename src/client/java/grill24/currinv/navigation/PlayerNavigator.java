@@ -67,9 +67,25 @@ public class PlayerNavigator implements IClientPlayerController {
         }
     }
 
+    public boolean startNavigationToPosition(BlockPos start, BlockPos goal, boolean acceptHighestElevationAlternativeGoal, long executionTimeLimit)
+    {
+        pathfinder = new AStarAsyncMinecraft(acceptHighestElevationAlternativeGoal, executionTimeLimit);
+        pathfinder.tryStartPathfinding(start, goal);
+
+        return true;
+    }
+
     public boolean startNavigationToPosition(BlockPos start, BlockPos goal, boolean acceptHighestElevationAlternativeGoal)
     {
-        pathfinder = new AStarAsyncMinecraft(acceptHighestElevationAlternativeGoal);
+        pathfinder = new AStarAsyncMinecraft(acceptHighestElevationAlternativeGoal, 20000);
+        pathfinder.tryStartPathfinding(start, goal);
+
+        return true;
+    }
+
+    public boolean startNavigationToPosition(BlockPos start, BlockPos goal)
+    {
+        pathfinder = new AStarAsyncMinecraft(false, 20000);
         pathfinder.tryStartPathfinding(start, goal);
 
         return true;

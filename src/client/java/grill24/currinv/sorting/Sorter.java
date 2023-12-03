@@ -15,7 +15,7 @@ import java.util.*;
 
 public class Sorter
 {
-    public boolean isEnabled, isQuickStackEnabled, isSorting;
+    public boolean isEnabled, isSortingEnabled, isQuickStackEnabled, isSorting;
     private int currentSortingSlotId, currentStockIndex, currentStockSlotIdsIndex;
 
     public BlockPos lastUsedContainerBlockPos;
@@ -23,7 +23,8 @@ public class Sorter
 
     public Sorter()
     {
-        isEnabled = false;
+        isEnabled = true;
+        isSortingEnabled = false;
         isQuickStackEnabled = false;
         isSorting = false;
 
@@ -36,25 +37,27 @@ public class Sorter
 
     public <T extends ScreenHandler> void onUpdate(MinecraftClient client, HandledScreen<T> screen)
     {
-        Optional<Inventory> screenInventoryOptional = SortingUtility.tryGetInventoryFromScreen(screen);
-        if(screenInventoryOptional.isPresent())
-        {
-            Optional<ContainerStockData> containerStockData = tryGetStockData(lastUsedContainerBlockPos);
-            if(containerStockData.isPresent()) {
-                if (!isSorting && containerStockData.get().isDirty()) {
-                    stopSorting();
-                    tryQuickStack(client, screen);
-                    tryStartSortContainer(screen);
+        if(isEnabled) {
+            Optional<Inventory> screenInventoryOptional = SortingUtility.tryGetInventoryFromScreen(screen);
+            if (screenInventoryOptional.isPresent()) {
+                tryInventoryScreen(screen);
+                Optional<ContainerStockData> containerStockData = tryGetStockData(lastUsedContainerBlockPos);
+                if (containerStockData.isPresent()) {
+                    if (!isSorting && containerStockData.get().isDirty()) {
+                        stopSorting();
+                        tryQuickStack(client, screen);
+                        tryStartSortContainer(screen);
+                        containerStockData.get().markClean();
+                    }
+
+                    tryDoSortingTick(client, screen);
                 }
-                containerStockData.get().markClean();
 
-                tryDoSortingTick(client, screen);
             }
-
         }
     }
 
-    private <T extends ScreenHandler> boolean tryInventoryScreen(HandledScreen<T> screen)
+    public <T extends ScreenHandler> boolean tryInventoryScreen(HandledScreen<T> screen)
     {
         Optional<Inventory> screenInventoryOptional = SortingUtility.tryGetInventoryFromScreen(screen);
         return screenInventoryOptional.map(this::tryInventoryInventory).orElse(false);
@@ -62,15 +65,13 @@ public class Sorter
 
     private boolean tryInventoryInventory(Inventory inventory)
     {
-        if((isEnabled || isQuickStackEnabled) && !isSorting)
+        if(isEnabled && !isSorting)
         {
             Optional<ContainerStockData> containerStockDataOptional = tryGetStockData(lastUsedContainerBlockPos);
             if(containerStockDataOptional.isPresent() && containerStockDataOptional.get().isDirty())
             {
                 ContainerStockData containerStockData = containerStockDataOptional.get();
                 containerStockData.inventoryInventory(lastUsedContainerBlockPos, inventory);
-
-                containerStockDataOptional.get().markClean();
             }
             else
             {
@@ -85,7 +86,7 @@ public class Sorter
     private <T extends ScreenHandler> boolean tryStartSortContainer(HandledScreen<T> screen)
     {
         if(!isSorting) {
-            if(isValidSortingConditions(screen) && tryInventoryScreen(screen)) {
+            if(isValidSortingConditions(screen)) {
                 isSorting = true;
                 return true;
             }
@@ -234,17 +235,17 @@ public class Sorter
 
     public void onUseContainer(LootableContainerBlockEntity containerBlockEntity) {
         lastUsedContainerBlockPos = containerBlockEntity.getPos();
-        tryInventoryInventory(containerBlockEntity);
+        markDirty();
     }
 
     private <T extends ScreenHandler> boolean isValidSortingConditions(HandledScreen<T> screen)
     {
-        return isEnabled && screen.getScreenHandler().getCursorStack().isEmpty();
+        return isEnabled && isSortingEnabled && screen.getScreenHandler().getCursorStack().isEmpty();
     }
 
     private <T extends ScreenHandler> boolean isValidQuickStackConditions(HandledScreen<T> screen)
     {
-        return isQuickStackEnabled && screen.getScreenHandler().getCursorStack().isEmpty();
+        return isEnabled && isQuickStackEnabled && screen.getScreenHandler().getCursorStack().isEmpty();
     }
 
     public void markDirty()

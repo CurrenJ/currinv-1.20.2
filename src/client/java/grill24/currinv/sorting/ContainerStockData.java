@@ -13,6 +13,14 @@ public class ContainerStockData implements IDirtyFlag {
     private ArrayList<ItemQuantityAndSlots> orderedStock;
     private boolean isDirty;
 
+    ContainerStockData()
+    {
+        isDirty = false;
+
+        stock = new HashMap<>();
+        orderedStock = new ArrayList<>();
+    }
+
     ContainerStockData(BlockPos blockPos, Inventory inventory)
     {
         isDirty = false;
@@ -68,7 +76,6 @@ public class ContainerStockData implements IDirtyFlag {
         }
 
         orderStock();
-        markClean();
     }
 
     public Optional<ItemQuantityAndSlots> getItemStock(Item item)

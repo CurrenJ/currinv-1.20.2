@@ -8,7 +8,8 @@ import java.util.*;
 
 public class AStarAsyncMinecraft {
     private static final int EXECUTION_TIME_LIMIT_PER_TICK_MS = 50;
-    private static final int EXECUTION_TIME_LIMIT = 20000;
+    private static final int EXECUTION_TIME_LIMIT_DEFAULT = 20000;
+    private long executionTimeLimit = EXECUTION_TIME_LIMIT_DEFAULT;
 
     PriorityQueue<Node> openSet;
     Set<Node> closedSet;
@@ -25,7 +26,7 @@ public class AStarAsyncMinecraft {
 
     private long startTime;
 
-    public AStarAsyncMinecraft(boolean acceptHighestElevationAlternativeGoal)
+    public AStarAsyncMinecraft(boolean acceptHighestElevationAlternativeGoal, long executionTimeLimit)
     {
         openSet = new PriorityQueue<>(Comparator.comparingInt(Node::f));
         closedSet = new HashSet<>();
@@ -33,6 +34,7 @@ public class AStarAsyncMinecraft {
         started = false;
         finished = false;
         this.acceptHighestElevationAlternativeGoal = acceptHighestElevationAlternativeGoal;
+        this.executionTimeLimit = executionTimeLimit;
     }
 
     public void onUpdate(ClientWorld world, ClientPlayerEntity player)
@@ -66,7 +68,7 @@ public class AStarAsyncMinecraft {
 
     public boolean findPath(ClientWorld world, ClientPlayerEntity player) {
         long executionStartTime = System.currentTimeMillis();
-        while (!openSet.isEmpty() && System.currentTimeMillis() - executionStartTime < EXECUTION_TIME_LIMIT_PER_TICK_MS && System.currentTimeMillis() - startTime < EXECUTION_TIME_LIMIT) {
+        while (!openSet.isEmpty() && System.currentTimeMillis() - executionStartTime < EXECUTION_TIME_LIMIT_PER_TICK_MS && System.currentTimeMillis() - startTime < executionTimeLimit) {
             current = openSet.poll();
 
             assert current != null;
@@ -105,7 +107,7 @@ public class AStarAsyncMinecraft {
         }
 
 
-        if(System.currentTimeMillis() - startTime > EXECUTION_TIME_LIMIT)
+        if(System.currentTimeMillis() - startTime > executionTimeLimit)
         {
             System.out.println("Search time limit elapsed. Searched " + closedSet.size() + " blocks. " + goal.blockPos);
             if(acceptHighestElevationAlternativeGoal) {

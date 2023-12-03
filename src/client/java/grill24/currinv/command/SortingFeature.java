@@ -2,18 +2,13 @@ package grill24.currinv.command;
 
 import com.mojang.brigadier.context.CommandContext;
 import grill24.currinv.CurrInvClient;
-import grill24.currinv.ScreenWithInventory;
+import grill24.currinv.command.ticking.ScreenTickingFeature;
+import grill24.currinv.command.ticking.ScreenTickingFeatureDto;
 import net.minecraft.client.MinecraftClient;
-import net.minecraft.client.gui.screen.ingame.GenericContainerScreen;
 import net.minecraft.client.gui.screen.ingame.HandledScreen;
-import net.minecraft.client.gui.screen.ingame.ShulkerBoxScreen;
-import net.minecraft.inventory.Inventory;
 import net.minecraft.item.ItemStack;
 import net.minecraft.screen.ScreenHandler;
 import net.minecraft.screen.ScreenHandlerListener;
-import net.minecraft.screen.ShulkerBoxScreenHandler;
-
-import java.util.Optional;
 
 public class SortingFeature extends ScreenTickingFeature {
     public SortingFeature() {
@@ -27,7 +22,7 @@ public class SortingFeature extends ScreenTickingFeature {
     public void setEnabled(CommandContext<?> commandContext, boolean isEnabled)
     {
         super.setEnabled(commandContext, isEnabled);
-        CurrInvClient.sorter.isEnabled = isEnabled;
+        CurrInvClient.sorter.isSortingEnabled = isEnabled;
     }
 
     @Override

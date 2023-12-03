@@ -1,6 +1,7 @@
 package grill24.currinv.command;
 
 import com.mojang.brigadier.context.CommandContext;
+import grill24.currinv.command.ticking.ITickingAction;
 import net.minecraft.client.MinecraftClient;
 
 public abstract class TickingFeature<T> extends Feature implements ITickingAction<T> {

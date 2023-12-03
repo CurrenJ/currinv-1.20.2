@@ -7,7 +7,9 @@ import net.minecraft.entity.ai.pathing.NavigationType;
 import net.minecraft.registry.tag.BlockTags;
 import net.minecraft.registry.tag.FluidTags;
 import net.minecraft.util.math.BlockPos;
+import net.minecraft.util.math.Direction;
 import net.minecraft.util.math.Vec3d;
+import net.minecraft.util.math.Vec3i;
 import org.joml.Vector2d;
 
 import java.util.ArrayList;
@@ -33,9 +35,10 @@ public class NavigationUtility {
                 BlockPos diagonal2 = new BlockPos(to.getX(), to.getY(), from.getZ());
                 boolean noLava = isNotLava(world, diagonal1) && isNotLava(world, diagonal1.up())
                         && isNotLava(world, diagonal2) && isNotLava(world, diagonal2.up());
+                boolean spaceForPlayerAboveDiagonal1 = hasSpaceForPlayerToStandAtBlockPos(world, player, diagonal1);
+                boolean spaceForPlayerAboveDiagonal2 = hasSpaceForPlayerToStandAtBlockPos(world, player, diagonal2);
                 return spaceForPlayerAboveToPos && noLava
-                        && (hasSpaceForPlayerToStandAtBlockPos(world, player, diagonal1)
-                        || hasSpaceForPlayerToStandAtBlockPos(world, player, diagonal2));
+                        && (spaceForPlayerAboveDiagonal1 && spaceForPlayerAboveDiagonal2);
             }
         } else if (to.getY() == from.getY() + 1) {
             boolean canJumpTo = canPathfindThrough(world, from.up(2));
@@ -89,11 +92,22 @@ public class NavigationUtility {
         return cardinals;
     }
 
-    public static Vector2d getPitchAndYawToLookTowards(ClientPlayerEntity player, BlockPos pos)
+    public static Vector2d getPitchAndYawToLookTowardsBlockFace(ClientPlayerEntity player, BlockPos pos)
     {
         Vec3d playerBodyPos = player.getPos();
         Vec3d playerHeadPos = new Vec3d(playerBodyPos.x, player.getEyeY(), playerBodyPos.z);
-        Vec3d target = pos.toCenterPos();
+
+        // Offset target so we don't click item frames
+        Vec3d target = pos.toCenterPos().offset(Direction.DOWN, 0.4);
+        Vec3i vi = pos.subtract(player.getBlockPos());
+        Direction dirFacingPos = Direction.fromVector(vi.getX(), 0, vi.getZ());
+        if(dirFacingPos != null)
+            target = target.offset(dirFacingPos.getOpposite(), 0.5 - 1/16.0);
+        else {
+            System.out.println("Direction is null!");
+            System.out.println("Player: " + player.getBlockX() + ", " + player.getBlockY() + ", " + player.getBlockZ());
+            System.out.println("Block: " + pos.getX() + ", " + pos.getY() + ", " + pos.getZ());
+        }
 
         Vec3d v = new Vec3d(target.getX() - playerHeadPos.getX(), target.getY() - playerHeadPos.getY(), target.getZ() - playerHeadPos.getZ());
         double yaw = (float) (Math.toDegrees(Math.atan2(v.getZ(), v.getX())) - 90.0f);

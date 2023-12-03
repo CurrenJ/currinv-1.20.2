@@ -1,184 +1,441 @@
 package grill24.currinv.sorting;
 
 import grill24.currinv.CurrInvClient;
+import grill24.currinv.debug.DebugParticles;
+import grill24.currinv.debug.DebugUtility;
 import grill24.currinv.navigation.NavigationUtility;
 import net.minecraft.block.entity.BlockEntity;
+import net.minecraft.block.entity.HopperBlockEntity;
 import net.minecraft.block.entity.LootableContainerBlockEntity;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.gui.screen.ingame.HandledScreen;
 import net.minecraft.client.network.ClientPlayerEntity;
 import net.minecraft.client.world.ClientWorld;
+import net.minecraft.inventory.Inventory;
+import net.minecraft.item.Item;
+import net.minecraft.particle.ParticleTypes;
 import net.minecraft.screen.ScreenHandler;
+import net.minecraft.screen.slot.SlotActionType;
 import net.minecraft.util.ActionResult;
 import net.minecraft.util.Hand;
 import net.minecraft.util.hit.BlockHitResult;
 import net.minecraft.util.math.BlockPos;
+import org.jetbrains.annotations.NotNull;
 import org.joml.Vector2d;
 
-import java.util.ArrayList;
-import java.util.List;
+import java.util.*;
+import java.util.stream.IntStream;
 
 public class FullSuiteSorter {
-    private List<LootableContainerBlockEntity> containersToSort;
+    private List<LootableContainerBlockEntity> containersToVisit;
     private int containerIndex;
-    private enum SortState { IDLE, START, NAVIGATE, LOOK_AT_CONTAINER, PRE_SORT, SORT, NEXT_CONTAINER, FINISH }
-    private SortState sortState;
+    private enum State {
+        IDLE,
+        START,
+        BEGIN_NAVIGATE_TO_CONTAINER,
+        WAIT_TO_ARRIVE_AT_CONTAINER,
+        LOOK_AT_CONTAINER,
+        OPEN_CONTAINER,
+        WAIT_FOR_CONTAINER_SCREEN,
+        DO_CONTAINER_SCREEN_INTERACTION,
+        CLOSE_CONTAINER,
+        NEXT_CONTAINER,
+        FINISH
+    }
+    private State state;
+
+    private State lastState;
     private BlockPos placeToStand;
-    private List<ContainerStockData> allContainersStockData;
+    private ContainerStockData allContainersStockData;
+
+    private enum Mode { SCAN, COLLECT, SORT }
+    private Mode mode;
+
+    public boolean isDebugModeEnabled;
+    public boolean isDebugVerbose;
+
+    private List<Item> itemsToCollect;
 
     public FullSuiteSorter() {
-        sortState = SortState.IDLE;
-        containersToSort = new ArrayList<>();
-        allContainersStockData = new ArrayList<>();
+        state = State.IDLE;
+        containersToVisit = new ArrayList<>();
+        allContainersStockData = new ContainerStockData();
     }
 
-    public void tryStartFullSuiteSort(MinecraftClient client) {
-        sortState = SortState.START;
+    public void tryStart() {
+        if(state == State.IDLE) {
+            state = State.START;
+        } else {
+            finish();
+        }
+    }
+
+    public void analyzeNearbyContainers(MinecraftClient client) {
+        mode = Mode.SCAN;
+        tryStart();
+    }
+
+    public void takeItemsFromNearbyContainers(@NotNull List<Item> items)
+    {
+        itemsToCollect = items;
+        mode = Mode.COLLECT;
+        tryStart();
     }
 
     public void onUpdateTick(MinecraftClient client) {
         assert client.player != null;
-        CurrInvClient.sorter.isEnabled = true;
-        switch (sortState) {
+        switch (state) {
             case START:
-                containerIndex = 0;
-                sortState = SortState.NAVIGATE;
-                allContainersStockData.clear();
-                scanForContainers(client.world, client.player);
+                start(client);
                 break;
-            case NAVIGATE:
-                navigateToContainer(client);
+            case BEGIN_NAVIGATE_TO_CONTAINER:
+                startNavigationToContainer(client);
+                break;
+            case WAIT_TO_ARRIVE_AT_CONTAINER:
+                waitForNavigationToContainer(client);
                 break;
             case LOOK_AT_CONTAINER:
                 lookAtContainer(client);
                 break;
-            case PRE_SORT:
+            case OPEN_CONTAINER:
                 openContainer(client);
                 break;
-            case SORT:
-                waitForSortToFinish(client);
+            case WAIT_FOR_CONTAINER_SCREEN:
+                // Handled in onScreenUpdateTick
+                break;
+            case DO_CONTAINER_SCREEN_INTERACTION:
+                doContainerInteraction(client);
+                break;
+            case CLOSE_CONTAINER:
+                // Handled in onScreenUpdateTick
                 break;
             case NEXT_CONTAINER:
-                nextContainer();
+                nextContainer(client);
                 break;
             case FINISH:
                 finish();
                 break;
         }
+
+        if(state != lastState)
+            onStateChanged(client);
+        lastState = state;
     }
 
-    private void scanForContainers(ClientWorld world, ClientPlayerEntity player)
+    public <T extends ScreenHandler> void onScreenUpdateTick(MinecraftClient client, HandledScreen<T> screen)
+    {
+        switch (state) {
+            case DO_CONTAINER_SCREEN_INTERACTION:
+                doContainerScreenInteraction(client, screen);
+                break;
+            case WAIT_FOR_CONTAINER_SCREEN:
+                waitForContainerScreenToRender(client);
+                break;
+            case CLOSE_CONTAINER:
+                closeOpenContainer(client);
+                break;
+        }
+
+        if(state != lastState)
+            onStateChanged(client);
+        lastState = state;
+    }
+
+    private List<LootableContainerBlockEntity> scanForNearbyContainers(ClientWorld world, ClientPlayerEntity player)
     {
         int searchRadius = 16;
         int containerLimit = 100;
 
-        containersToSort.clear();
+        LinkedHashSet<LootableContainerBlockEntity> containersToVisit = new LinkedHashSet<>();
         for (int x = -searchRadius; x < searchRadius; x++) {
             for (int y = -searchRadius; y < searchRadius; y++) {
                 for (int z = -searchRadius; z < searchRadius; z++) {
-                    if (containersToSort.size() >= containerLimit) {
-                        return;
+                    if (this.containersToVisit.size() >= containerLimit) {
+                        return containersToVisit.stream().toList();
                     }
                     BlockEntity blockEntity = world.getBlockEntity(player.getBlockPos().add(x, y, z));
-                    if (blockEntity instanceof LootableContainerBlockEntity) {
-                        containersToSort.add((LootableContainerBlockEntity) blockEntity);
+                    if (blockEntity instanceof LootableContainerBlockEntity lootableContainerBlockEntity && !(blockEntity instanceof HopperBlockEntity) && !containersToVisit.contains(lootableContainerBlockEntity)) {
+                        containersToVisit.add(lootableContainerBlockEntity);
                     }
+                }
+            }
+        }
+        return containersToVisit.stream().toList();
+    }
+
+    private ArrayList<LootableContainerBlockEntity> getContainersWithItems(ClientWorld world, List<Item> items)
+    {
+        ArrayList<LootableContainerBlockEntity> containersWithItems = new ArrayList<>();
+        for(Item item : items)
+        {
+            Optional<ItemQuantityAndSlots> stock = allContainersStockData.getItemStock(item);
+            if(stock.isPresent())
+            {
+                for(var entry : stock.get().slotIds.entrySet())
+                {
+                    BlockPos blockPos = entry.getKey();
+                    LootableContainerBlockEntity container = (LootableContainerBlockEntity) world.getBlockEntity(blockPos);
+                    if(container != null)
+                    {
+                        containersWithItems.add(container);
+                    }
+                }
+            }
+        }
+        return containersWithItems;
+    }
+
+    private void start(MinecraftClient client)
+    {
+        // If we're already running, stop.
+        if(state != State.START) {
+            state = State.IDLE;
+            return;
+        }
+
+        containerIndex = 0;
+        state = State.BEGIN_NAVIGATE_TO_CONTAINER;
+
+        // Update our stock reference from the sorter data.
+        ArrayList<ContainerStockData> data = new ArrayList<>();
+        CurrInvClient.sorter.stockData.forEach((key, value) -> data.add(value));
+        allContainersStockData = new ContainerStockData(data);
+
+        switch (mode) {
+            case SCAN:
+                containersToVisit = scanForNearbyContainers(client.world, client.player);
+                break;
+            case COLLECT:
+                containersToVisit = getContainersWithItems(client.world, itemsToCollect);
+                break;
+        }
+    }
+
+    private void startNavigationToContainer(MinecraftClient client) {
+        if(containerIndex >= containersToVisit.size()) {
+            state = State.FINISH;
+            return;
+        }
+
+        LootableContainerBlockEntity container = containersToVisit.get(containerIndex);
+        if (container != null) {
+            if(!CurrInvClient.navigator.isNavigating() && !CurrInvClient.navigator.isSearchingForPath()){
+                placeToStand = getPlaceToStandByContainer(client.world, client.player, container.getPos());
+                if (placeToStand != null) {
+                    CurrInvClient.navigator.startNavigationToPosition(client.player.getBlockPos(), placeToStand, false, 3000);
+                    state = State.WAIT_TO_ARRIVE_AT_CONTAINER;
+                } else {
+                    state = State.NEXT_CONTAINER;
                 }
             }
         }
     }
 
-    private void navigateToContainer(MinecraftClient client) {
-        LootableContainerBlockEntity container = containersToSort.get(containerIndex);
-        if (container != null) {
-            if(client.player.getBlockPos().equals(placeToStand) && !CurrInvClient.navigator.isNavigating() && !CurrInvClient.navigator.isSearchingForPath()) {
-                sortState = SortState.LOOK_AT_CONTAINER;
-            } else if(!CurrInvClient.navigator.isNavigating() && !CurrInvClient.navigator.isSearchingForPath()) {
-                placeToStand = getPlaceToStandByContainer(client.world, client.player, container.getPos());
-                if (placeToStand != null) {
-                    CurrInvClient.navigator.startNavigationToPosition(client.player.getBlockPos(), placeToStand, false);
-                } else {
-                    sortState = SortState.NEXT_CONTAINER;
-                }
+    private void waitForNavigationToContainer(MinecraftClient client)
+    {
+        if(!CurrInvClient.navigator.isNavigating() && !CurrInvClient.navigator.isSearchingForPath()) {
+            if(client.player != null && client.player.getBlockPos().equals(placeToStand)) {
+                state = State.LOOK_AT_CONTAINER;
+            } else {
+                state = State.NEXT_CONTAINER;
             }
         }
     }
 
     private void lookAtContainer(MinecraftClient client) {
-        assert client.interactionManager != null;
-
-        LootableContainerBlockEntity container = containersToSort.get(containerIndex);
-        if (container != null) {
-            Vector2d pitchAndYaw = NavigationUtility.getPitchAndYawToLookTowards(client.player, container.getPos());
+        LootableContainerBlockEntity container = containersToVisit.get(containerIndex);
+        if (client.player != null && container != null) {
+            Vector2d pitchAndYaw = NavigationUtility.getPitchAndYawToLookTowardsBlockFace(client.player, container.getPos());
             client.player.setYaw((float) pitchAndYaw.y);
             client.player.setPitch((float) pitchAndYaw.x);
-            sortState = SortState.PRE_SORT;
+            if(client.crosshairTarget instanceof BlockHitResult blockHitResult && blockHitResult.getBlockPos().equals(container.getPos())) {
+                state = State.OPEN_CONTAINER;
+            }
         }
         else {
-            sortState = SortState.NEXT_CONTAINER;
+            state = State.NEXT_CONTAINER;
         }
     }
 
     private void openContainer(MinecraftClient client) {
         assert client.interactionManager != null;
 
-        LootableContainerBlockEntity container = containersToSort.get(containerIndex);
-        if (container != null) {
-            if(!CurrInvClient.sorter.isSorting) {
-                BlockHitResult blockHitResult = (BlockHitResult)client.crosshairTarget;
-                ActionResult actionResult = client.interactionManager.interactBlock(client.player, Hand.MAIN_HAND, blockHitResult);
-                if(actionResult == ActionResult.SUCCESS) {
-                    sortState = SortState.SORT;
+        LootableContainerBlockEntity container = containersToVisit.get(containerIndex);
+        if (container != null && client.crosshairTarget instanceof BlockHitResult blockHitResult) {
+            ActionResult actionResult = client.interactionManager.interactBlock(client.player, Hand.MAIN_HAND, blockHitResult);
+            if(blockHitResult.getBlockPos().equals(container.getPos())) {
+                if (actionResult == ActionResult.SUCCESS) {
+                    // TODO Fail to open blocked chests gets us stuck in the netxt state. Need to handle this.
+                    state = State.WAIT_FOR_CONTAINER_SCREEN;
                 } else {
-                    sortState = SortState.NEXT_CONTAINER;
+                    state = State.NEXT_CONTAINER;
                 }
+            } else {
+                DebugUtility.print(client, "§cFailed to open container at " + container.getPos() + " because the block hit result was " + blockHitResult.getBlockPos() + " instead.");
+                state = State.NEXT_CONTAINER;
             }
         } else {
-            sortState = SortState.NEXT_CONTAINER;
+            state = State.NEXT_CONTAINER;
         }
     }
 
-    private void waitForSortToFinish(MinecraftClient client) {
-        if(!CurrInvClient.sorter.isSorting) {
-            sortState = SortState.NEXT_CONTAINER;
-
-            assert client.player != null;
-            client.player.closeScreen();
-        }
-    }
-
-    private void nextContainer()
+    private void waitForContainerScreenToRender(MinecraftClient client)
     {
-        containerIndex++;
-        placeToStand = null;
-        if(containerIndex >= containersToSort.size()) {
-            sortState = SortState.FINISH;
-        } else {
-            sortState = SortState.NAVIGATE;
+        assert client.player != null;
+
+        if(client.player.currentScreenHandler != null)
+        {
+            state = State.DO_CONTAINER_SCREEN_INTERACTION;
+        }
+    }
+
+    private void doContainerInteraction(MinecraftClient client) {
+        switch (mode) {
+            case SCAN:
+                state = State.CLOSE_CONTAINER;
+                break;
+            case COLLECT:
+                break;
+        }
+        // Could put sorting in here. Not using rn.
+
+    }
+
+    private <T extends ScreenHandler> void doContainerScreenInteraction(MinecraftClient client, HandledScreen<T> screen) {
+        switch (mode) {
+            case COLLECT:
+                collectItems(client, screen, itemsToCollect);
+                state = State.CLOSE_CONTAINER;
+                break;
+        }
+    }
+
+    private <T extends ScreenHandler> void collectItems(MinecraftClient client, HandledScreen<T> screen, List<Item> itemsToCollect)
+    {
+        assert client.player != null;
+        assert client.interactionManager != null;
+
+        Optional<Inventory> inventory = SortingUtility.tryGetInventoryFromScreen(screen);
+        if(inventory.isPresent()) {
+            for (Item item : itemsToCollect) {
+                Optional<ItemQuantityAndSlots> stock = allContainersStockData.getItemStock(item);
+                if (stock.isPresent()) {
+                    // TODO: Not use this field from another class.
+                    if (stock.get().slotIds.containsKey(CurrInvClient.sorter.lastUsedContainerBlockPos)) {
+                        for (Integer slotId : stock.get().slotIds.get(CurrInvClient.sorter.lastUsedContainerBlockPos)) {
+                            if(inventory.get().getStack(slotId).getItem().equals(item))
+                                SortingUtility.clickSlot(client, screen, slotId, SlotActionType.QUICK_MOVE);
+                        }
+                    }
+                }
+            }
+        }
+        CurrInvClient.sorter.tryInventoryScreen(screen);
+    }
+
+    private void closeOpenContainer(MinecraftClient client)
+    {
+        assert client.player != null;
+        client.player.closeScreen();
+        if(client.currentScreen == null)
+        {
+            state = State.NEXT_CONTAINER;
+        }
+    }
+
+    private void nextContainer(MinecraftClient client)
+    {
+        closeOpenContainer(client);
+        if(client.currentScreen == null)
+        {
+            containerIndex++;
+            placeToStand = null;
+            if(containerIndex >= containersToVisit.size()) {
+                state = State.FINISH;
+            } else {
+                state = State.BEGIN_NAVIGATE_TO_CONTAINER;
+            }
         }
     }
 
     private void finish()
     {
-        CurrInvClient.sorter.isEnabled = false;
+        CurrInvClient.sorter.isSortingEnabled = false;
 
-        CurrInvClient.sorter.stockData.forEach((key, value) -> allContainersStockData.add(value));
-        List<ItemQuantityAndSlots> allStock = new ContainerStockData(allContainersStockData).getOrderedStock();
+        state = State.IDLE;
+    }
 
-        sortState = SortState.IDLE;
+    private void onStateChanged(MinecraftClient client)
+    {
+        if(isDebugModeEnabled) {
+            String color = "§f";
+            switch (state) {
+                case IDLE:
+                    color = "§f";
+                    break;
+                case START:
+                    color = "§1";
+                    break;
+                case BEGIN_NAVIGATE_TO_CONTAINER:
+                    color = "§2";
+                    break;
+                case WAIT_TO_ARRIVE_AT_CONTAINER:
+                    color = "§3";
+                    break;
+                case LOOK_AT_CONTAINER:
+                    color = "§4";
+                    break;
+                case OPEN_CONTAINER:
+                    color = "§5";
+                    break;
+                case WAIT_FOR_CONTAINER_SCREEN:
+                    color = "§6";
+                    break;
+                case DO_CONTAINER_SCREEN_INTERACTION:
+                    color = "§7";
+                    break;
+                case CLOSE_CONTAINER:
+                    color = "§8";
+                    break;
+                case NEXT_CONTAINER:
+                    color = "§9";
+                    break;
+                case FINISH:
+                    color = "§a";
+                    break;
+            }
+            if(isDebugVerbose) {
+                DebugUtility.print(client, "State: " + color + state.toString());
+            } else {
+                if(state == State.NEXT_CONTAINER && lastState == State.BEGIN_NAVIGATE_TO_CONTAINER) {
+                    DebugUtility.print(client, "State: §cFailed to find open space adjacent to container. Moving on to next container. " + containersToVisit.get(containerIndex).getPos());
+                } else if(state == State.NEXT_CONTAINER && lastState == State.WAIT_TO_ARRIVE_AT_CONTAINER) {
+                    DebugUtility.print(client, "State: §cFailed to find path to container. Moving on to next container. " + containersToVisit.get(containerIndex).getPos());
+                } else if(state == State.NEXT_CONTAINER && lastState != State.CLOSE_CONTAINER) {
+                    DebugUtility.print(client, "State: §cFailed in state " + lastState.name() + ". Moving on to next container. " + containersToVisit.get(containerIndex).getPos());
+                } else if(state == State.NEXT_CONTAINER) {
+                    DebugUtility.print(client, "State: §aSuccessfully closed container. Moving on to next container.");
+                } else if(state == State.FINISH) {
+                    DebugUtility.print(client, "State: §aFinished sorting.");
+                }
+            }
+        }
     }
 
     private static BlockPos getPlaceToStandByContainer(ClientWorld world, ClientPlayerEntity player, BlockPos containerPos)
     {
+        BlockPos closest = null;
+        int closestDistToPlayer = Integer.MAX_VALUE;
         for (BlockPos adjacent : NavigationUtility.getCardinals(containerPos)) {
             for(int dy = 0; dy >= -2; dy--){
                 BlockPos blockPos = adjacent.up(dy);
-                if (canAccessContainerFromBlockPos(world, player, containerPos, blockPos)) {
-                    return blockPos;
+                if (canAccessContainerFromBlockPos(world, player, containerPos, blockPos) && player.getBlockPos().getManhattanDistance(blockPos) < closestDistToPlayer) {
+                    closest = blockPos;
+                    closestDistToPlayer = player.getBlockPos().getManhattanDistance(blockPos);
                 }
             }
         }
-        return null;
+        return closest;
     }
 
     private static boolean canAccessContainerFromBlockPos(ClientWorld world, ClientPlayerEntity player, BlockPos containerPos, BlockPos blockPos)
@@ -193,6 +450,26 @@ public class FullSuiteSorter {
     }
 
     private boolean isDoneSorting() {
-        return sortState == SortState.FINISH;
+        return state == State.FINISH;
+    }
+
+    // ---- Debug ----
+    public void updateDebugParticles(boolean isEnabled) {
+        if (isEnabled && state != State.IDLE) {
+            if(containerIndex < containersToVisit.size()) {
+                BlockPos activeContainer = containersToVisit.get(containerIndex).getPos();
+
+                DebugParticles.setDebugParticles(DebugParticles.SORTING_PARTICLE_KEY,
+                        IntStream.range(0, containersToVisit.size())
+                                .filter(i -> i > containerIndex)
+                                .mapToObj(containersToVisit::get)
+                                .map(BlockEntity::getPos).toList(),
+                        ParticleTypes.SOUL);
+                DebugParticles.setDebugParticles(DebugParticles.SORTING_ACTIVE_CONTAINER_PARTICLE_KEY, Collections.singletonList(activeContainer), ParticleTypes.FLAME);
+            }
+        } else {
+            DebugParticles.clearDebugParticles(DebugParticles.SORTING_PARTICLE_KEY);
+            DebugParticles.clearDebugParticles(DebugParticles.SORTING_ACTIVE_CONTAINER_PARTICLE_KEY);
+        }
     }
 }

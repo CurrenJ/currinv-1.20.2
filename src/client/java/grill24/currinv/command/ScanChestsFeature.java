@@ -4,14 +4,14 @@ import com.mojang.brigadier.context.CommandContext;
 import grill24.currinv.CurrInvClient;
 import net.minecraft.client.MinecraftClient;
 
-public class FullSuiteSortingFeature extends Feature {
+public class ScanChestsFeature extends Feature {
 
-    public FullSuiteSortingFeature() {
-        super("fullSort", false);
+    public ScanChestsFeature() {
+        super("scan", false);
     }
 
     @Override
     public void startAction(CommandContext<?> commandContext, MinecraftClient client) {
-        CurrInvClient.fullSuiteSorter.tryStartFullSuiteSort(client);
+        CurrInvClient.fullSuiteSorter.analyzeNearbyContainers(client);
     }
 }

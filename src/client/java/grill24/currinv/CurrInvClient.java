@@ -1,6 +1,8 @@
 package grill24.currinv;
 
-import grill24.currinv.command.*;
+import grill24.currinv.command.ticking.ClientTickingFeature;
+import grill24.currinv.command.ticking.ScreenTickingFeature;
+import grill24.currinv.command.ticking.ScreenTickingFeatureDto;
 import grill24.currinv.navigation.PlayerNavigator;
 import grill24.currinv.sorting.FullSuiteSorter;
 import grill24.currinv.sorting.Sorter;
@@ -12,7 +14,6 @@ import net.minecraft.block.entity.BlockEntity;
 import net.minecraft.block.entity.LootableContainerBlockEntity;
 import net.minecraft.client.gui.screen.ingame.HandledScreen;
 import net.minecraft.util.ActionResult;
-import org.joml.Vector2d;
 
 import static grill24.currinv.CurrInvCommandRegistry.registerClientCommands;
 
@@ -49,6 +50,8 @@ public class CurrInvClient implements ClientModInitializer {
 					for (ScreenTickingFeature action : CurrInvCommandRegistry.SCREEN_TICKING_FEATURES) {
 						action.onUpdate(new ScreenTickingFeatureDto(client, tickScreen));
 					}
+
+					fullSuiteSorter.onScreenUpdateTick(client, ((HandledScreen<?>) tickScreen));
 				});
 			}
 		});

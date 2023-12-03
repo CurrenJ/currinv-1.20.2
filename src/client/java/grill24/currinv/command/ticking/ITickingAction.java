@@ -1,4 +1,6 @@
-package grill24.currinv.command;
+package grill24.currinv.command.ticking;
+
+import grill24.currinv.command.IAction;
 
 public interface ITickingAction<T> extends IAction {
 

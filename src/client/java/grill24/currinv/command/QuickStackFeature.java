@@ -2,6 +2,8 @@ package grill24.currinv.command;
 
 import com.mojang.brigadier.context.CommandContext;
 import grill24.currinv.CurrInvClient;
+import grill24.currinv.command.ticking.ScreenTickingFeature;
+import grill24.currinv.command.ticking.ScreenTickingFeatureDto;
 import net.minecraft.client.MinecraftClient;
 
 public class QuickStackFeature extends ScreenTickingFeature {

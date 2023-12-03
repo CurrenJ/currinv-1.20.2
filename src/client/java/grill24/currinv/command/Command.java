@@ -6,7 +6,7 @@ import net.minecraft.text.Text;
 
 public class Command implements ICommand {
     private final String commandText;
-    private boolean isEnabled;
+    protected boolean isEnabled;
     private final boolean isToggleable;
     public Command(String commandText, boolean isToggleable)
     {
