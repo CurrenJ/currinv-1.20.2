@@ -84,6 +84,7 @@ public class DebugParticles {
                     case PATH:
                         Vec3d velocity = lastBlockCenterPos == null ? new Vec3d(0, 0, 0) : centerPos.subtract(lastBlockCenterPos).multiply(0.05);;
                         DebugUtility.interpolateBetweenPoints(lastBlockCenterPos, centerPos, 3).forEach(interpolatedPos -> world.addParticle(particleEffect, interpolatedPos.x, interpolatedPos.y, interpolatedPos.z, velocity.x, velocity.y, velocity.z));
+                        world.addParticle(particleEffect, centerPos.x, centerPos.y, centerPos.z, velocity.x, velocity.y, velocity.z);
                         lastBlockCenterPos = centerPos;
                         break;
                 }

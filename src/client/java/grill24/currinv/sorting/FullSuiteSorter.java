@@ -357,12 +357,6 @@ public class FullSuiteSorter {
         return NavigationUtility.canPlayerStandOnBlockBelow(world, player, blockPos) && NavigationUtility.hasSpaceForPlayerToStandAtBlockPos(world, player, blockPos);
     }
 
-    public <T extends ScreenHandler> void onScreenTick(MinecraftClient client, HandledScreen<T> screen) {
-        if (!isDoneSorting()) {
-
-        }
-    }
-
     private boolean isDoneSorting() {
         return state == State.FINISH;
     }

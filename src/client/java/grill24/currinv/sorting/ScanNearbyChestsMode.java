@@ -41,7 +41,7 @@ public class ScanNearbyChestsMode implements IFullSuiteSorterMode {
 
     @Override
     public <T extends ScreenHandler> boolean doContainerScreenInteractionTick(MinecraftClient client, HandledScreen<T> screen) {
-        return false;
+        return true;
     }
 
     @Override
