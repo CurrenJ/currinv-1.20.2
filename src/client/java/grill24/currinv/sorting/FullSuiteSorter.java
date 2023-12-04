@@ -48,13 +48,10 @@ public class FullSuiteSorter {
     private BlockPos placeToStand;
     private ContainerStockData allContainersStockData;
 
-    private enum Mode { SCAN, COLLECT, SORT }
-    private Mode mode;
+    private IFullSuiteSorterMode mode;
 
     public boolean isDebugModeEnabled;
     public boolean isDebugVerbose;
-
-    private List<Item> itemsToCollect;
 
     public FullSuiteSorter() {
         state = State.IDLE;
@@ -70,15 +67,17 @@ public class FullSuiteSorter {
         }
     }
 
-    public void analyzeNearbyContainers(MinecraftClient client) {
-        mode = Mode.SCAN;
+    public void analyzeNearbyContainers() {
+        mode = new ScanNearbyChestsMode();
         tryStart();
     }
 
     public void takeItemsFromNearbyContainers(@NotNull List<Item> items)
     {
-        itemsToCollect = items;
-        mode = Mode.COLLECT;
+        mode = new CollectItemsMode();
+        CollectItemsMode collectItemsMode = (CollectItemsMode) mode;
+        collectItemsMode.setItemsToCollect(items);
+        collectItemsMode.setStockData(allContainersStockData);
         tryStart();
     }
 
@@ -141,50 +140,6 @@ public class FullSuiteSorter {
         lastState = state;
     }
 
-    private List<LootableContainerBlockEntity> scanForNearbyContainers(ClientWorld world, ClientPlayerEntity player)
-    {
-        int searchRadius = 16;
-        int containerLimit = 100;
-
-        LinkedHashSet<LootableContainerBlockEntity> containersToVisit = new LinkedHashSet<>();
-        for (int x = -searchRadius; x < searchRadius; x++) {
-            for (int y = -searchRadius; y < searchRadius; y++) {
-                for (int z = -searchRadius; z < searchRadius; z++) {
-                    if (this.containersToVisit.size() >= containerLimit) {
-                        return containersToVisit.stream().toList();
-                    }
-                    BlockEntity blockEntity = world.getBlockEntity(player.getBlockPos().add(x, y, z));
-                    if (blockEntity instanceof LootableContainerBlockEntity lootableContainerBlockEntity && !(blockEntity instanceof HopperBlockEntity) && !containersToVisit.contains(lootableContainerBlockEntity)) {
-                        containersToVisit.add(lootableContainerBlockEntity);
-                    }
-                }
-            }
-        }
-        return containersToVisit.stream().toList();
-    }
-
-    private ArrayList<LootableContainerBlockEntity> getContainersWithItems(ClientWorld world, List<Item> items)
-    {
-        ArrayList<LootableContainerBlockEntity> containersWithItems = new ArrayList<>();
-        for(Item item : items)
-        {
-            Optional<ItemQuantityAndSlots> stock = allContainersStockData.getItemStock(item);
-            if(stock.isPresent())
-            {
-                for(var entry : stock.get().slotIds.entrySet())
-                {
-                    BlockPos blockPos = entry.getKey();
-                    LootableContainerBlockEntity container = (LootableContainerBlockEntity) world.getBlockEntity(blockPos);
-                    if(container != null)
-                    {
-                        containersWithItems.add(container);
-                    }
-                }
-            }
-        }
-        return containersWithItems;
-    }
-
     private void start(MinecraftClient client)
     {
         // If we're already running, stop.
@@ -201,14 +156,7 @@ public class FullSuiteSorter {
         CurrInvClient.sorter.stockData.forEach((key, value) -> data.add(value));
         allContainersStockData = new ContainerStockData(data);
 
-        switch (mode) {
-            case SCAN:
-                containersToVisit = scanForNearbyContainers(client.world, client.player);
-                break;
-            case COLLECT:
-                containersToVisit = getContainersWithItems(client.world, itemsToCollect);
-                break;
-        }
+        containersToVisit = mode.getContainersToVisit(client);
     }
 
     private void startNavigationToContainer(MinecraftClient client) {
@@ -290,47 +238,13 @@ public class FullSuiteSorter {
     }
 
     private void doContainerInteraction(MinecraftClient client) {
-        switch (mode) {
-            case SCAN:
-                state = State.CLOSE_CONTAINER;
-                break;
-            case COLLECT:
-                break;
-        }
-        // Could put sorting in here. Not using rn.
-
+        if(mode.doContainerInteractionTick(client))
+            state = State.CLOSE_CONTAINER;
     }
 
     private <T extends ScreenHandler> void doContainerScreenInteraction(MinecraftClient client, HandledScreen<T> screen) {
-        switch (mode) {
-            case COLLECT:
-                collectItems(client, screen, itemsToCollect);
-                state = State.CLOSE_CONTAINER;
-                break;
-        }
-    }
-
-    private <T extends ScreenHandler> void collectItems(MinecraftClient client, HandledScreen<T> screen, List<Item> itemsToCollect)
-    {
-        assert client.player != null;
-        assert client.interactionManager != null;
-
-        Optional<Inventory> inventory = SortingUtility.tryGetInventoryFromScreen(screen);
-        if(inventory.isPresent()) {
-            for (Item item : itemsToCollect) {
-                Optional<ItemQuantityAndSlots> stock = allContainersStockData.getItemStock(item);
-                if (stock.isPresent()) {
-                    // TODO: Not use this field from another class.
-                    if (stock.get().slotIds.containsKey(CurrInvClient.sorter.lastUsedContainerBlockPos)) {
-                        for (Integer slotId : stock.get().slotIds.get(CurrInvClient.sorter.lastUsedContainerBlockPos)) {
-                            if(inventory.get().getStack(slotId).getItem().equals(item))
-                                SortingUtility.clickSlot(client, screen, slotId, SlotActionType.QUICK_MOVE);
-                        }
-                    }
-                }
-            }
-        }
-        CurrInvClient.sorter.tryInventoryScreen(screen);
+        if(mode.doContainerScreenInteractionTick(client, screen))
+            state = State.CLOSE_CONTAINER;
     }
 
     private void closeOpenContainer(MinecraftClient client)

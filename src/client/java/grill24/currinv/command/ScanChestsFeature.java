@@ -12,6 +12,6 @@ public class ScanChestsFeature extends Feature {
 
     @Override
     public void startAction(CommandContext<?> commandContext, MinecraftClient client) {
-        CurrInvClient.fullSuiteSorter.analyzeNearbyContainers(client);
+        CurrInvClient.fullSuiteSorter.analyzeNearbyContainers();
     }
 }
