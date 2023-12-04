@@ -1,5 +1,6 @@
 package grill24.currinv.sorting;
 
+import grill24.currinv.CurrInvClient;
 import grill24.currinv.IDirtyFlag;
 import net.minecraft.block.entity.LootableContainerBlockEntity;
 import net.minecraft.client.MinecraftClient;
@@ -180,6 +181,9 @@ public class Sorter
 
             if (currentStockIndex == orderedStock.size()) {
                 stopSorting();
+
+                tryInventoryScreen(screen);
+                CurrInvClient.fullSuiteSorter.setAllContainersStockData(this);
             }
         }
 
@@ -188,10 +192,11 @@ public class Sorter
 
     private void stopSorting()
     {
-        isSorting = false;
         currentSortingSlotId = 0;
         currentStockIndex = 0;
         currentStockSlotIdsIndex = 0;
+        if(isSorting)
+            isSorting = false;
     }
 
     private <T extends ScreenHandler> boolean tryQuickStack(MinecraftClient client, HandledScreen<T> screen)
@@ -233,8 +238,8 @@ public class Sorter
         return Optional.empty();
     }
 
-    public void onUseContainer(LootableContainerBlockEntity containerBlockEntity) {
-        lastUsedContainerBlockPos = containerBlockEntity.getPos();
+    public void onUseContainer(MinecraftClient client, LootableContainerBlockEntity containerBlockEntity) {
+        lastUsedContainerBlockPos = SortingUtility.getOneBlockPosFromDoubleChests(client, containerBlockEntity.getPos());
         markDirty();
     }
 

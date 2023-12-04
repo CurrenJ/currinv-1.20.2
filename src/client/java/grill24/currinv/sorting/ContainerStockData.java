@@ -92,7 +92,7 @@ public class ContainerStockData implements IDirtyFlag {
     {
         orderedStock.clear();
         for (Map.Entry<Item, ItemQuantityAndSlots> entry: stock.entrySet()) {
-            System.out.println(entry.getValue());
+//            System.out.println(entry.getValue());
             orderedStock.add(entry.getValue());
         }
         orderedStock.sort(Collections.reverseOrder());

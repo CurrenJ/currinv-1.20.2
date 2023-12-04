@@ -12,6 +12,7 @@ import net.fabricmc.fabric.api.client.screen.v1.ScreenEvents;
 import net.fabricmc.fabric.api.event.player.UseBlockCallback;
 import net.minecraft.block.entity.BlockEntity;
 import net.minecraft.block.entity.LootableContainerBlockEntity;
+import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.gui.screen.ingame.HandledScreen;
 import net.minecraft.util.ActionResult;
 
@@ -61,7 +62,7 @@ public class CurrInvClient implements ClientModInitializer {
 		UseBlockCallback.EVENT.register((player, world, hand, hitResult) -> {
 			BlockEntity blockEntity = world.getBlockEntity(hitResult.getBlockPos());
 			if(world.isClient() && blockEntity instanceof LootableContainerBlockEntity) {
-				CurrInvClient.sorter.onUseContainer(((LootableContainerBlockEntity) blockEntity));
+				CurrInvClient.sorter.onUseContainer(MinecraftClient.getInstance(), ((LootableContainerBlockEntity) blockEntity));
 			};
 			return ActionResult.PASS;
 		});

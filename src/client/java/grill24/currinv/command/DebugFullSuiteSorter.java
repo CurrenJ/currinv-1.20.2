@@ -19,12 +19,17 @@ public class DebugFullSuiteSorter extends ClientSlowTickingFeature {
     public void setEnabled(CommandContext<?> commandContext, boolean isEnabled)
     {
         super.setEnabled(commandContext, isEnabled);
-        CurrInvClient.fullSuiteSorter.updateDebugParticles(isEnabled);
-        CurrInvClient.fullSuiteSorter.isDebugModeEnabled = true;
+
+        CurrInvClient.fullSuiteSorter.isDebugModeEnabled = isEnabled;
+        if(CurrInvClient.fullSuiteSorter.isDebugParticlesEnabled) {
+            CurrInvClient.fullSuiteSorter.updateDebugParticles(isEnabled);
+        }
     }
 
     @Override
     public void onSlowUpdate(MinecraftClient args) {
-        CurrInvClient.fullSuiteSorter.updateDebugParticles(isEnabled);
+        if(CurrInvClient.fullSuiteSorter.isDebugParticlesEnabled) {
+            CurrInvClient.fullSuiteSorter.updateDebugParticles(isEnabled);
+        }
     }
 }

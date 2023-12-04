@@ -1,14 +1,12 @@
 package grill24.currinv.sorting;
 
-import net.minecraft.block.entity.BlockEntity;
-import net.minecraft.block.entity.HopperBlockEntity;
-import net.minecraft.block.entity.LootableContainerBlockEntity;
+import net.minecraft.block.entity.*;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.gui.screen.ingame.HandledScreen;
-import net.minecraft.client.network.ClientPlayerEntity;
-import net.minecraft.client.world.ClientWorld;
 import net.minecraft.screen.ScreenHandler;
+import net.minecraft.util.math.BlockPos;
 
+import java.util.ArrayList;
 import java.util.LinkedHashSet;
 import java.util.List;
 
@@ -25,22 +23,24 @@ public class ScanNearbyChestsMode implements IFullSuiteSorterMode {
                 for (int y = -searchRadius; y < searchRadius; y++) {
                     for (int z = -searchRadius; z < searchRadius; z++) {
                         if (containersToVisit.size() >= containerLimit) {
-                            return containersToVisit.stream().toList();
+                            return new ArrayList<>(containersToVisit);
                         }
                         BlockEntity blockEntity = client.world.getBlockEntity(client.player.getBlockPos().add(x, y, z));
-                        if (blockEntity instanceof LootableContainerBlockEntity lootableContainerBlockEntity && !(blockEntity instanceof HopperBlockEntity) && !containersToVisit.contains(lootableContainerBlockEntity)) {
-                            containersToVisit.add(lootableContainerBlockEntity);
+                        if (blockEntity instanceof ChestBlockEntity || blockEntity instanceof ShulkerBoxBlockEntity) {
+                            LootableContainerBlockEntity lootableContainerBlockEntity = ((LootableContainerBlockEntity) blockEntity);
+                            if(!containersToVisit.contains(lootableContainerBlockEntity))
+                                containersToVisit.add(SortingUtility.getOneBlockEntityFromDoubleChests(client, lootableContainerBlockEntity));
                         }
                     }
                 }
             }
 
         }
-        return containersToVisit.stream().toList();
+        return new ArrayList<>(containersToVisit);
     }
 
     @Override
-    public <T extends ScreenHandler> boolean doContainerScreenInteractionTick(MinecraftClient client, HandledScreen<T> screen) {
+    public <T extends ScreenHandler> boolean doContainerScreenInteractionTick(MinecraftClient client, HandledScreen<T> screen, List<LootableContainerBlockEntity> containersToVisit, int currentContainerIndex) {
         return true;
     }
 

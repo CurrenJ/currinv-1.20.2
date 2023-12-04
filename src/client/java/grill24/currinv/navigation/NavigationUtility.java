@@ -97,8 +97,7 @@ public class NavigationUtility {
         Vec3d playerBodyPos = player.getPos();
         Vec3d playerHeadPos = new Vec3d(playerBodyPos.x, player.getEyeY(), playerBodyPos.z);
 
-        // Offset target so we don't click item frames
-        Vec3d target = pos.toCenterPos().offset(Direction.DOWN, 0.4);
+        Vec3d target = pos.toCenterPos();
         Vec3i vi = pos.subtract(player.getBlockPos());
         Direction dirFacingPos = Direction.fromVector(vi.getX(), 0, vi.getZ());
         if(dirFacingPos != null)

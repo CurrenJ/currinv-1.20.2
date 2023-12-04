@@ -26,6 +26,7 @@ public class CurrInvCommandRegistry {
     public static final Feature QUICK_STACK_TOGGLE = new QuickStackFeature();
     public static final Feature SCAN_CHESTS = new ScanChestsFeature();
     public static final Feature COLLECT_ITEMS = new CollectItemsFeature();
+    public static final Feature CONSOLIDATE_AND_SORT = new ConsolidateAndSortFeature();
 
     public static final Feature DEBUG_PARTICLES = new DebugParticlesFeature();
     public static final Feature DEBUG_PATH = new DebugNavigationPathFeature();
@@ -47,6 +48,7 @@ public class CurrInvCommandRegistry {
         registerFeature(QUICK_STACK_TOGGLE);
         registerFeature(SCAN_CHESTS);
         registerFeature(COLLECT_ITEMS);
+        registerFeature(CONSOLIDATE_AND_SORT);
         registerFeature(DEBUG_PARTICLES);
         registerFeature(DEBUG_PATH);
         registerFeature(DEBUG_FSS);
@@ -96,12 +98,20 @@ public class CurrInvCommandRegistry {
 
         if(feature instanceof DebugFullSuiteSorter)
         {
-            return buildToggleableFeatureCommand(feature).then(ClientCommandManager.literal("verbose").executes(context -> {
+            var command =  buildToggleableFeatureCommand(feature).then(ClientCommandManager.literal("verbose").executes(context -> {
                 feature.setEnabled(context,true);
                 CurrInvClient.fullSuiteSorter.isDebugVerbose = !CurrInvClient.fullSuiteSorter.isDebugVerbose;
                 DebugUtility.print(context, "Verbose mode: " + (CurrInvClient.fullSuiteSorter.isDebugVerbose ? "enabled" : "disabled"));
                 return 1;
             }));
+            command = command.then(ClientCommandManager.literal("particles").executes(context -> {
+                feature.setEnabled(context,true);
+                CurrInvClient.fullSuiteSorter.isDebugParticlesEnabled = !CurrInvClient.fullSuiteSorter.isDebugParticlesEnabled;
+                DebugUtility.print(context, "Particles mode: " + (CurrInvClient.fullSuiteSorter.isDebugParticlesEnabled ? "enabled" : "disabled"));
+                return 1;
+            }));
+
+            return command;
         }
 
         if(feature.isToggleable())
