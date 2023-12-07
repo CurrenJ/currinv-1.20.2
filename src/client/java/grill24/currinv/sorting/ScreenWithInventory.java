@@ -1,4 +1,4 @@
-package grill24.currinv;
+package grill24.currinv.sorting;
 
 import net.minecraft.inventory.Inventory;
 

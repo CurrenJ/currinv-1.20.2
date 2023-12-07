@@ -1,7 +1,6 @@
 package grill24.currinv.sorting;
 
 import grill24.currinv.CurrInvClient;
-import grill24.currinv.ScreenWithInventory;
 import net.minecraft.block.ChestBlock;
 import net.minecraft.block.DoubleBlockProperties;
 import net.minecraft.block.entity.LootableContainerBlockEntity;
@@ -16,7 +15,6 @@ import net.minecraft.screen.ScreenHandler;
 import net.minecraft.screen.ShulkerBoxScreenHandler;
 import net.minecraft.screen.slot.SlotActionType;
 import net.minecraft.util.math.BlockPos;
-import net.minecraft.util.math.Direction;
 
 import java.util.ArrayList;
 import java.util.List;

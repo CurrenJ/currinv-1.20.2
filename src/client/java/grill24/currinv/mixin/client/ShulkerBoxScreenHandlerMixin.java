@@ -1,6 +1,6 @@
 package grill24.currinv.mixin.client;
 
-import grill24.currinv.ScreenWithInventory;
+import grill24.currinv.sorting.ScreenWithInventory;
 import net.minecraft.inventory.Inventory;
 import net.minecraft.screen.ScreenHandler;
 import net.minecraft.screen.ScreenHandlerType;
