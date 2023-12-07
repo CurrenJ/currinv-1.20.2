@@ -5,6 +5,7 @@ import grill24.currinv.command.*;
 import grill24.currinv.command.ticking.ClientTickingFeature;
 import grill24.currinv.command.ticking.ScreenTickingFeature;
 import grill24.currinv.debug.DebugUtility;
+import grill24.currinv.sorting.Sorter;
 import net.fabricmc.fabric.api.client.command.v2.ClientCommandManager;
 import net.fabricmc.fabric.api.client.command.v2.ClientCommandRegistrationCallback;
 import net.fabricmc.fabric.api.client.command.v2.FabricClientCommandSource;
@@ -32,6 +33,8 @@ public class CurrInvCommandRegistry {
     public static final Feature DEBUG_PATH = new DebugNavigationPathFeature();
     public static final Feature DEBUG_FSS = new DebugFullSuiteSorter();
 
+    public static final Feature SET_CONFIG = new SetConfigFeature();
+
     public static final List<Feature> FEATURES;
     public static final List<ClientTickingFeature> CLIENT_TICKING_FEATURES;
     public static final List<ScreenTickingFeature> SCREEN_TICKING_FEATURES;
@@ -49,9 +52,12 @@ public class CurrInvCommandRegistry {
         registerFeature(SCAN_CHESTS);
         registerFeature(COLLECT_ITEMS);
         registerFeature(CONSOLIDATE_AND_SORT);
+
         registerFeature(DEBUG_PARTICLES);
         registerFeature(DEBUG_PATH);
         registerFeature(DEBUG_FSS);
+
+        registerFeature(SET_CONFIG);
     }
 
     private static void registerFeature(Feature feature) {
@@ -94,10 +100,24 @@ public class CurrInvCommandRegistry {
                         collectItemsFeature.startAction(context, MinecraftClient.getInstance());
                         return 1;
                     }));
-        }
+        } else if(feature instanceof SetConfigFeature) {
+            var command = buildActionFeatureCommand(feature);
 
-        if(feature instanceof DebugFullSuiteSorter)
-        {
+            command = command.then(ClientCommandManager.literal("quantity").executes(context -> {
+                CurrInvClient.config.setSortingStyle(Sorter.SortingStyle.QUANTITY);
+                return 1;
+            }));
+            command = command.then(ClientCommandManager.literal("type").executes(context -> {
+                CurrInvClient.config.setSortingStyle(Sorter.SortingStyle.CREATIVE_MENU);
+                return 1;
+            }));
+            command = command.then(ClientCommandManager.literal("lexicographical").executes(context -> {
+                CurrInvClient.config.setSortingStyle(Sorter.SortingStyle.LEXICOGRAPHICAL);
+                return 1;
+            }));
+
+            return command;
+        } else if(feature instanceof DebugFullSuiteSorter) {
             var command =  buildToggleableFeatureCommand(feature).then(ClientCommandManager.literal("verbose").executes(context -> {
                 feature.setEnabled(context,true);
                 CurrInvClient.fullSuiteSorter.isDebugVerbose = !CurrInvClient.fullSuiteSorter.isDebugVerbose;

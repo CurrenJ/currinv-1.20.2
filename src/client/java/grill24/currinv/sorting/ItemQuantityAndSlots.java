@@ -1,6 +1,9 @@
 package grill24.currinv.sorting;
 
+import grill24.currinv.CurrInvClient;
 import net.minecraft.item.Item;
+import net.minecraft.item.ItemGroup;
+import net.minecraft.item.ItemGroups;
 import net.minecraft.util.math.BlockPos;
 import org.jetbrains.annotations.NotNull;
 
@@ -45,6 +48,15 @@ public class ItemQuantityAndSlots implements Comparable<ItemQuantityAndSlots> {
 
     @Override
     public int compareTo(@NotNull ItemQuantityAndSlots o) {
+        return switch (CurrInvClient.sorter.currentSortingStyle) {
+            case QUANTITY -> compareByQuantity(o);
+            case LEXICOGRAPHICAL -> compareByLexicographical(o);
+            case CREATIVE_MENU -> compareByCreativeMenuOrder(o);
+            default -> 0;
+        };
+    }
+
+    public int compareByQuantity(ItemQuantityAndSlots o) {
         int quantityComparison = Integer.compare(this.quantity, o.quantity);
 
         // How we neatly sort non-stackables; i.e. Music Discs
@@ -55,9 +67,6 @@ public class ItemQuantityAndSlots implements Comparable<ItemQuantityAndSlots> {
             if (maxStack != 0) {
                 return maxStack;
             }
-//                else if(quantityComparison != 0) {
-//                    return quantityComparison;
-//                }
             else {
                 return this.item.toString().compareTo(o.item.toString());
             }
@@ -68,7 +77,23 @@ public class ItemQuantityAndSlots implements Comparable<ItemQuantityAndSlots> {
         }
         // Fallback to lexicographical
         else {
-            return this.item.toString().compareTo(o.item.toString());
+            return compareByLexicographical(o);
+        }
+    }
+
+    public int compareByLexicographical(ItemQuantityAndSlots o) {
+        return o.item.getName().getString().compareTo(this.item.getName().getString());
+    }
+
+    public int compareByCreativeMenuOrder(ItemQuantityAndSlots o) {
+        if (CurrInvClient.sorter.creativeMenuOrder != null) {
+            int myIndex = CurrInvClient.sorter.creativeMenuOrder.getOrDefault(this.item.asItem(), Integer.MAX_VALUE);
+            int otherIndex = CurrInvClient.sorter.creativeMenuOrder.getOrDefault(o.item.asItem(), Integer.MAX_VALUE);
+
+            return Integer.compare(otherIndex, myIndex);
+        }
+        else {
+            return 0;
         }
     }
 }

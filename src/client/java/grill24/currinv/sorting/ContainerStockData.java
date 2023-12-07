@@ -23,7 +23,7 @@ public class ContainerStockData implements IDirtyFlag {
 
     ContainerStockData(BlockPos blockPos, Inventory inventory)
     {
-        isDirty = false;
+        isDirty = true;
 
         stock = new HashMap<>();
         orderedStock = new ArrayList<>();

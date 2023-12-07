@@ -7,7 +7,10 @@ import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.gui.screen.ingame.HandledScreen;
 import net.minecraft.inventory.Inventory;
 import net.minecraft.item.Item;
+import net.minecraft.item.ItemGroup;
+import net.minecraft.item.ItemGroups;
 import net.minecraft.item.ItemStack;
+import net.minecraft.registry.Registries;
 import net.minecraft.screen.ScreenHandler;
 import net.minecraft.screen.slot.SlotActionType;
 import net.minecraft.util.math.BlockPos;
@@ -21,6 +24,12 @@ public class Sorter
 
     public BlockPos lastUsedContainerBlockPos;
     public HashMap<BlockPos, ContainerStockData> stockData;
+
+
+    public enum SortingStyle { QUANTITY, LEXICOGRAPHICAL, CREATIVE_MENU }
+    public SortingStyle currentSortingStyle = SortingStyle.CREATIVE_MENU;
+
+    public HashMap<Item, Integer> creativeMenuOrder;
 
     public Sorter()
     {
@@ -52,8 +61,9 @@ public class Sorter
                     }
 
                     tryDoSortingTick(client, screen);
+                } else {
+                    stopSorting();
                 }
-
             }
         }
     }
@@ -88,6 +98,7 @@ public class Sorter
     {
         if(!isSorting) {
             if(isValidSortingConditions(screen)) {
+                tryGenerateCreativeMenuOrderLookup();
                 isSorting = true;
                 return true;
             }
@@ -190,7 +201,7 @@ public class Sorter
         return true;
     }
 
-    private void stopSorting()
+    public void stopSorting()
     {
         currentSortingSlotId = 0;
         currentStockIndex = 0;
@@ -251,6 +262,23 @@ public class Sorter
     private <T extends ScreenHandler> boolean isValidQuickStackConditions(HandledScreen<T> screen)
     {
         return isEnabled && isQuickStackEnabled && screen.getScreenHandler().getCursorStack().isEmpty();
+    }
+
+    public void tryGenerateCreativeMenuOrderLookup()
+    {
+        MinecraftClient client = MinecraftClient.getInstance();
+        if(creativeMenuOrder == null && client != null && client.player != null) {
+            boolean shouldShowOperatorTab = client.options.getOperatorItemsTab().getValue() && client.player.isCreativeLevelTwoOp();
+            ItemGroups.updateDisplayContext(client.player.networkHandler.getEnabledFeatures(), shouldShowOperatorTab, client.player.getWorld().getRegistryManager());
+
+            creativeMenuOrder = new HashMap<>();
+            ItemGroup searchGroup = Registries.ITEM_GROUP.getOrThrow(ItemGroups.SEARCH);
+            ItemStack[] itemStacks = searchGroup.getDisplayStacks().toArray(new ItemStack[0]);
+            for (int i = 0; i < itemStacks.length; i++) {
+                Item item = itemStacks[i].getItem();
+                creativeMenuOrder.put(item, i);
+            }
+        }
     }
 
     public void markDirty()

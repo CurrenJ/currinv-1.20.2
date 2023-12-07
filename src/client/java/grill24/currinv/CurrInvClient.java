@@ -4,6 +4,8 @@ import grill24.currinv.command.ticking.ClientTickingFeature;
 import grill24.currinv.command.ticking.ScreenTickingFeature;
 import grill24.currinv.command.ticking.ScreenTickingFeatureDto;
 import grill24.currinv.navigation.PlayerNavigator;
+import grill24.currinv.persistence.Config;
+import grill24.currinv.persistence.PersistenceManager;
 import grill24.currinv.sorting.FullSuiteSorter;
 import grill24.currinv.sorting.Sorter;
 import net.fabricmc.api.ClientModInitializer;
@@ -14,18 +16,30 @@ import net.minecraft.block.entity.BlockEntity;
 import net.minecraft.block.entity.LootableContainerBlockEntity;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.gui.screen.ingame.HandledScreen;
+import net.minecraft.item.ItemStack;
+import net.minecraft.screen.PlayerScreenHandler;
+import net.minecraft.screen.ScreenHandler;
+import net.minecraft.screen.ScreenHandlerListener;
 import net.minecraft.util.ActionResult;
 
 import static grill24.currinv.CurrInvCommandRegistry.registerClientCommands;
 
 public class CurrInvClient implements ClientModInitializer {
+
+	public static Config config;
 	public static Sorter sorter;
-	public static PlayerNavigator navigator = new PlayerNavigator();
-	public static FullSuiteSorter fullSuiteSorter = new FullSuiteSorter();
+	public static PlayerNavigator navigator;
+	public static FullSuiteSorter fullSuiteSorter;
+	public static PersistenceManager persistenceManager;
 
 	@Override
 	public void onInitializeClient() {
+		config = new Config();
+
 		sorter = new Sorter();
+		navigator = new PlayerNavigator();
+		fullSuiteSorter = new FullSuiteSorter();
+		persistenceManager = new PersistenceManager();
 
 		registerScreenEvents();
 		registerClientCommands();
@@ -40,12 +54,26 @@ public class CurrInvClient implements ClientModInitializer {
 			}
 
 			fullSuiteSorter.onUpdateTick(client);
+			if(CurrInvClient.sorter.isSorting && client.player != null && client.player.currentScreenHandler instanceof PlayerScreenHandler)
+				CurrInvClient.sorter.stopSorting();
 		});
 	}
 
 	public static void registerScreenEvents() {
 		ScreenEvents.AFTER_INIT.register((client, screen, scaledWidth, scaledHeight) -> {
-			if (screen instanceof HandledScreen<?>) {
+			if (screen instanceof HandledScreen<?> handledScreen) {
+				(handledScreen).getScreenHandler().addListener(new ScreenHandlerListener() {
+					@Override
+					public void onSlotUpdate(ScreenHandler handler, int slotId, ItemStack stack) {
+						CurrInvClient.sorter.markDirty();
+					}
+
+					@Override
+					public void onPropertyUpdate(ScreenHandler handler, int property, int value) {
+
+					}
+				});
+
 				// Repeatedly called while screen is being rendered (each tick).
 				ScreenEvents.afterTick(screen).register((tickScreen) -> {
 					for (ScreenTickingFeature action : CurrInvCommandRegistry.SCREEN_TICKING_FEATURES) {
