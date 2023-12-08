@@ -26,8 +26,7 @@ public class AStarAsyncMinecraft {
 
     private long startTime;
 
-    public AStarAsyncMinecraft(boolean acceptHighestElevationAlternativeGoal, long executionTimeLimit)
-    {
+    public AStarAsyncMinecraft(boolean acceptHighestElevationAlternativeGoal, long executionTimeLimit) {
         openSet = new PriorityQueue<>(Comparator.comparingInt(Node::f));
         closedSet = new HashSet<>();
         path = null;
@@ -37,18 +36,16 @@ public class AStarAsyncMinecraft {
         this.executionTimeLimit = executionTimeLimit;
     }
 
-    public void onUpdate(ClientWorld world, ClientPlayerEntity player)
-    {
-        if(!finished) {
+    public void onUpdate(ClientWorld world, ClientPlayerEntity player) {
+        if (!finished) {
             finished = findPath(world, player);
-            if(finished) {
+            if (finished) {
                 System.out.println("Finished in " + (System.currentTimeMillis() - startTime) + "ms");
             }
         }
     }
 
-    public void startFindPath(Node start, Node goal)
-    {
+    public void startFindPath(Node start, Node goal) {
         System.out.println("Finding path to " + goal.blockPos);
 
         started = true;
@@ -60,7 +57,7 @@ public class AStarAsyncMinecraft {
         this.start = start;
         this.goal = goal;
         openSet.add(start);
-        if(acceptHighestElevationAlternativeGoal)
+        if (acceptHighestElevationAlternativeGoal)
             highestAccessibleNode = start;
 
         startTime = System.currentTimeMillis();
@@ -77,8 +74,7 @@ public class AStarAsyncMinecraft {
                 return true;
             }
 
-            if(acceptHighestElevationAlternativeGoal && current.y > highestAccessibleNode.y)
-            {
+            if (acceptHighestElevationAlternativeGoal && current.y > highestAccessibleNode.y) {
                 highestAccessibleNode = current;
             }
 
@@ -107,10 +103,9 @@ public class AStarAsyncMinecraft {
         }
 
 
-        if(System.currentTimeMillis() - startTime > executionTimeLimit)
-        {
+        if (System.currentTimeMillis() - startTime > executionTimeLimit) {
             System.out.println("Search time limit elapsed. Searched " + closedSet.size() + " blocks. " + goal.blockPos);
-            if(acceptHighestElevationAlternativeGoal) {
+            if (acceptHighestElevationAlternativeGoal) {
                 System.out.println("Highest node with path: " + highestAccessibleNode.blockPos);
                 path = reconstructPath(highestAccessibleNode);
                 return true;
@@ -118,10 +113,9 @@ public class AStarAsyncMinecraft {
             return true;
         }
 
-        if(openSet.isEmpty())
-        {
+        if (openSet.isEmpty()) {
             System.out.println("Could not find path to goal. Searched " + closedSet.size() + " blocks.");
-            if(acceptHighestElevationAlternativeGoal) {
+            if (acceptHighestElevationAlternativeGoal) {
                 System.out.println("Highest node with path: " + highestAccessibleNode.blockPos);
                 path = reconstructPath(highestAccessibleNode);
                 return true;
@@ -150,12 +144,12 @@ public class AStarAsyncMinecraft {
         Node start = new Node(startPos);
         Node goal = new Node(goalPos);
 
-        if(!started)
+        if (!started)
             startFindPath(start, goal);
     }
 
     public Optional<List<BlockPos>> tryGetPath() {
-        if(finished) {
+        if (finished) {
             List<BlockPos> blockPosPath = new ArrayList<>();
             if (path != null) {
                 for (Node node : path) {
@@ -167,13 +161,11 @@ public class AStarAsyncMinecraft {
         return Optional.empty();
     }
 
-    public boolean isFinished()
-    {
+    public boolean isFinished() {
         return finished;
     }
 
-    public boolean isStarted()
-    {
+    public boolean isStarted() {
         return started;
     }
 }

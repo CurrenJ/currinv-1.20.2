@@ -22,7 +22,6 @@ public class LookAndAdvanceClientPlayerController extends ClientPlayerController
     public float movementSpeedForward;
 
 
-
     public LookAndAdvanceClientPlayerController(NavigationData navigationData) {
         super(navigationData);
         desiredPitchAndYaw = new Vector2d();
@@ -30,7 +29,7 @@ public class LookAndAdvanceClientPlayerController extends ClientPlayerController
 
     @Override
     public void onUpdate(MinecraftClient client) {
-        if(CurrInvClient.navigator.isNavigating() && client.player != null && client.world != null) {
+        if (CurrInvClient.navigator.isNavigating() && client.player != null && client.world != null) {
             ClientWorld world = client.world;
             ClientPlayerEntity player = client.player;
 
@@ -56,14 +55,13 @@ public class LookAndAdvanceClientPlayerController extends ClientPlayerController
 
     @Override
     public boolean shouldJump(boolean jumping) {
-        if(CurrInvClient.navigator.isNavigating())
+        if (CurrInvClient.navigator.isNavigating())
             return shouldJump;
         else
             return jumping;
     }
 
-    private boolean calculateShouldJump(ClientWorld world, ClientPlayerEntity player)
-    {
+    private boolean calculateShouldJump(ClientWorld world, ClientPlayerEntity player) {
         BlockPos currentNode = navigationData.getCurrentNode();
         BlockPos nextNode = navigationData.getNextNode();
 
@@ -72,8 +70,8 @@ public class LookAndAdvanceClientPlayerController extends ClientPlayerController
         boolean shouldAscendOnLadder = world.getBlockState(currentNode).getBlock().equals(Blocks.LADDER) && nextNode.getY() > player.getPos().getY();
 
         boolean isDiagonal = !NavigationUtility.isDirectlyAdjacent(currentNode, nextNode);
-        if(isDiagonal) {
-            if(!nextNodeIsAbove){
+        if (isDiagonal) {
+            if (!nextNodeIsAbove) {
                 // Logic for jumping over diagonal waist-high "hurdles"
                 BlockPos diagonal1 = new BlockPos(currentNode.getX(), currentNode.getY(), nextNode.getZ());
                 BlockPos diagonal2 = new BlockPos(nextNode.getX(), nextNode.getY(), currentNode.getZ());
@@ -89,7 +87,7 @@ public class LookAndAdvanceClientPlayerController extends ClientPlayerController
             }
         }
 
-        if(isInWater)
+        if (isInWater)
             return shouldAscendInWater;
 
         return nextNodeIsAbove || shouldAscendInWater || shouldAscendOnLadder;
@@ -97,22 +95,20 @@ public class LookAndAdvanceClientPlayerController extends ClientPlayerController
 
     @Override
     public float getMovementForward(float movementForward, GameOptions settings) {
-        if(CurrInvClient.navigator.isNavigating())
-        {
+        if (CurrInvClient.navigator.isNavigating()) {
             return this.movementSpeedForward;
         }
         return movementForward;
     }
 
-    private float calculateMovementForward(ClientWorld world, ClientPlayerEntity player)
-    {
+    private float calculateMovementForward(ClientWorld world, ClientPlayerEntity player) {
         float speed = 1.0f;
 
         // Falling
-        if(!isOnGround && !shouldJump && isNextNodeBelowCurrentNode) {
-            if(!isInWater)
+        if (!isOnGround && !shouldJump && isNextNodeBelowCurrentNode) {
+            if (!isInWater)
                 speed *= 0;
-            else if(isNextNodeBelowPlayer)
+            else if (isNextNodeBelowPlayer)
                 speed *= 0;
         }
 
@@ -120,9 +116,9 @@ public class LookAndAdvanceClientPlayerController extends ClientPlayerController
         BlockPos to = navigationData.getNextNode();
 
 
-        if(from.getX() == to.getX() && from.getZ() == to.getZ() && player.getBlockX() == to.getX() && player.getBlockZ() == to.getZ())
+        if (from.getX() == to.getX() && from.getZ() == to.getZ() && player.getBlockX() == to.getX() && player.getBlockZ() == to.getZ())
             speed *= 0.25f;
-        else if(navigationData.getNextNode().getY() < navigationData.getCurrentNode().getY() && !world.getBlockState(to).getFluidState().isIn(FluidTags.WATER))
+        else if (navigationData.getNextNode().getY() < navigationData.getCurrentNode().getY() && !world.getBlockState(to).getFluidState().isIn(FluidTags.WATER))
             speed *= 0.5f;
 
         return speed;
@@ -130,7 +126,7 @@ public class LookAndAdvanceClientPlayerController extends ClientPlayerController
 
     @Override
     public float getMovementSideways(float movementSideways, GameOptions settings) {
-        if(CurrInvClient.navigator.isNavigating()) {
+        if (CurrInvClient.navigator.isNavigating()) {
             return 0;
         } else {
             return movementSideways;
@@ -139,22 +135,19 @@ public class LookAndAdvanceClientPlayerController extends ClientPlayerController
 
     @Override
     public Vector2d getPitchAndYaw(Vector2d pitchAndYaw, ClientPlayerEntity player) {
-        if(CurrInvClient.navigator.isNavigating()) {
+        if (CurrInvClient.navigator.isNavigating()) {
             float lerpFactor = 0.1f;
 
             float yaw = angleLerp(player.getYaw(), (float) desiredPitchAndYaw.y, lerpFactor);
             float pitch = angleLerp(player.getPitch(), (float) desiredPitchAndYaw.x, lerpFactor);
 
             return new Vector2d(pitch, yaw);
-        }
-        else
-        {
+        } else {
             return pitchAndYaw;
         }
     }
 
-    private Vector2d calculateDesiredPitchAndYaw(ClientPlayerEntity player)
-    {
+    private Vector2d calculateDesiredPitchAndYaw(ClientPlayerEntity player) {
         // This is to stop the yaw from rapidly spinning when we are directly above the next node but haven't reached it.
         // E.g. sinking in water
 //        if(!isOnGround && !shouldJump && isNextNodeBelowCurrentNode)
@@ -169,8 +162,8 @@ public class LookAndAdvanceClientPlayerController extends ClientPlayerController
 
         double pitch = Math.toDegrees(-Math.atan2(v.getY(), Math.sqrt(Math.pow(v.getX(), 2) + Math.pow(v.getZ(), 2))));
 //        if(!shouldJump && isOnGround) {
-            pitch = Math.max(-15, pitch);
-            pitch = Math.min(15, pitch);
+        pitch = Math.max(-15, pitch);
+        pitch = Math.min(15, pitch);
 //        }
 
 //        System.out.println("target: " + navigationData.getNextNode() + " | " + "player: " + player.getPos() + " | " + yaw);

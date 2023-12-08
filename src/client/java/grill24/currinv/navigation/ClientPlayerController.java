@@ -3,15 +3,13 @@ package grill24.currinv.navigation;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.network.ClientPlayerEntity;
 import net.minecraft.client.option.GameOptions;
-import net.minecraft.client.world.ClientWorld;
 import org.joml.Vector2d;
 
 public abstract class ClientPlayerController implements IClientPlayerController {
 
     NavigationData navigationData;
 
-    public ClientPlayerController(NavigationData navigationData)
-    {
+    public ClientPlayerController(NavigationData navigationData) {
         this.navigationData = navigationData;
     }
 
@@ -23,21 +21,20 @@ public abstract class ClientPlayerController implements IClientPlayerController 
 
     @Override
     public abstract float getMovementForward(float movementForward, GameOptions settings);
+
     @Override
     public abstract float getMovementSideways(float movementSideways, GameOptions settings);
 
     @Override
     public abstract Vector2d getPitchAndYaw(Vector2d pitchAndYaw, ClientPlayerEntity player);
 
-    protected float angleLerp(float a, float b, float t)
-    {
+    protected float angleLerp(float a, float b, float t) {
         float normalizedA = NavigationUtility.normalizeAngle(a);
         float normalizedB = NavigationUtility.normalizeAngle(b);
         return NavigationUtility.normalizeAngle(normalizedA + (NavigationUtility.normalizeAngle(normalizedB - normalizedA) * t));
     }
 
-    public boolean isMovementKeyPressed(GameOptions settings)
-    {
+    public boolean isMovementKeyPressed(GameOptions settings) {
         return settings.forwardKey.isPressed()
                 || settings.backKey.isPressed()
                 || settings.leftKey.isPressed()

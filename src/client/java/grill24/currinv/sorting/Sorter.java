@@ -21,11 +21,13 @@ import net.minecraft.screen.ScreenHandlerListener;
 import net.minecraft.screen.slot.SlotActionType;
 import net.minecraft.util.math.BlockPos;
 
-import java.util.*;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.Optional;
+import java.util.OptionalInt;
 
 @Command("sorter")
-public class Sorter
-{
+public class Sorter {
     public boolean isEnabled, isSorting;
 
     @CommandOption("isSortingEnabled")
@@ -39,13 +41,13 @@ public class Sorter
     public HashMap<BlockPos, ContainerStockData> stockData;
 
 
-    public enum SortingStyle { QUANTITY, LEXICOGRAPHICAL, CREATIVE_MENU }
+    public enum SortingStyle {QUANTITY, LEXICOGRAPHICAL, CREATIVE_MENU}
+
     public SortingStyle currentSortingStyle = SortingStyle.CREATIVE_MENU;
 
     public HashMap<Item, Integer> creativeMenuOrder;
 
-    public Sorter()
-    {
+    public Sorter() {
         isEnabled = true;
         isSortingEnabled = false;
         isQuickStackEnabled = false;
@@ -59,9 +61,8 @@ public class Sorter
     }
 
     @ScreenTick
-    public void onUpdate(MinecraftClient client, Screen screen)
-    {
-        if(isEnabled && screen instanceof HandledScreen<?> handledScreen) {
+    public void onUpdate(MinecraftClient client, Screen screen) {
+        if (isEnabled && screen instanceof HandledScreen<?> handledScreen) {
             Optional<Inventory> screenInventoryOptional = SortingUtility.tryGetInventoryFromScreen(handledScreen);
             if (screenInventoryOptional.isPresent()) {
                 tryInventoryScreen(handledScreen);
@@ -92,28 +93,23 @@ public class Sorter
             }
 
             @Override
-            public void onPropertyUpdate(ScreenHandler handler, int property, int value) {}
+            public void onPropertyUpdate(ScreenHandler handler, int property, int value) {
+            }
         });
     }
 
-    public <T extends ScreenHandler> boolean tryInventoryScreen(HandledScreen<T> screen)
-    {
+    public <T extends ScreenHandler> boolean tryInventoryScreen(HandledScreen<T> screen) {
         Optional<Inventory> screenInventoryOptional = SortingUtility.tryGetInventoryFromScreen(screen);
         return screenInventoryOptional.map(this::tryInventoryInventory).orElse(false);
     }
 
-    private boolean tryInventoryInventory(Inventory inventory)
-    {
-        if(isEnabled && !isSorting)
-        {
+    private boolean tryInventoryInventory(Inventory inventory) {
+        if (isEnabled && !isSorting) {
             Optional<ContainerStockData> containerStockDataOptional = tryGetStockData(lastUsedContainerBlockPos);
-            if(containerStockDataOptional.isPresent() && containerStockDataOptional.get().isDirty())
-            {
+            if (containerStockDataOptional.isPresent() && containerStockDataOptional.get().isDirty()) {
                 ContainerStockData containerStockData = containerStockDataOptional.get();
                 containerStockData.inventoryInventory(lastUsedContainerBlockPos, inventory);
-            }
-            else
-            {
+            } else {
                 ContainerStockData containerStockData = new ContainerStockData(lastUsedContainerBlockPos, inventory);
                 stockData.put(lastUsedContainerBlockPos, containerStockData);
             }
@@ -122,10 +118,9 @@ public class Sorter
         return false;
     }
 
-    private <T extends ScreenHandler> boolean tryStartSortContainer(HandledScreen<T> screen)
-    {
-        if(!isSorting) {
-            if(isValidSortingConditions(screen)) {
+    private <T extends ScreenHandler> boolean tryStartSortContainer(HandledScreen<T> screen) {
+        if (!isSorting) {
+            if (isValidSortingConditions(screen)) {
                 tryGenerateCreativeMenuOrderLookup();
                 isSorting = true;
                 return true;
@@ -137,9 +132,9 @@ public class Sorter
     private <T extends ScreenHandler> boolean tryDoSortingTick(MinecraftClient client, HandledScreen<T> screen) {
         assert client.player != null;
 
-        if(isSorting && isValidSortingConditions(screen)) {
+        if (isSorting && isValidSortingConditions(screen)) {
             Optional<ContainerStockData> containerStockDataOptional = tryGetStockData(lastUsedContainerBlockPos);
-            if(containerStockDataOptional.isPresent()) {
+            if (containerStockDataOptional.isPresent()) {
                 ContainerStockData containerStockData = containerStockDataOptional.get();
                 return tryDoSortingTick(client, screen, containerStockData);
             }
@@ -149,7 +144,7 @@ public class Sorter
     }
 
     private <T extends ScreenHandler> boolean tryDoSortingTick(MinecraftClient client, HandledScreen<T> screen, ContainerStockData containerStockData) {
-        if(currentStockIndex >= containerStockData.getOrderedStock().size()) {
+        if (currentStockIndex >= containerStockData.getOrderedStock().size()) {
             stopSorting();
             return false;
         }
@@ -229,30 +224,26 @@ public class Sorter
         return true;
     }
 
-    public void stopSorting()
-    {
+    public void stopSorting() {
         currentSortingSlotId = 0;
         currentStockIndex = 0;
         currentStockSlotIdsIndex = 0;
-        if(isSorting)
+        if (isSorting)
             isSorting = false;
     }
 
-    private <T extends ScreenHandler> boolean tryQuickStack(MinecraftClient client, HandledScreen<T> screen)
-    {
-        if(isValidQuickStackConditions(screen))
-        {
+    private <T extends ScreenHandler> boolean tryQuickStack(MinecraftClient client, HandledScreen<T> screen) {
+        if (isValidQuickStackConditions(screen)) {
             assert client.player != null;
             Inventory playerInventory = client.player.getInventory();
 
-            for(int i = SortingUtility.PLAYER_HOTBAR_SLOTS_END_INDEX; i < playerInventory.size(); i++)
-            {
+            for (int i = SortingUtility.PLAYER_HOTBAR_SLOTS_END_INDEX; i < playerInventory.size(); i++) {
                 ItemStack itemStack = playerInventory.getStack(i);
                 Item item = itemStack.getItem();
 
-                if(item.getMaxCount() > 1) {
+                if (item.getMaxCount() > 1) {
                     Optional<ContainerStockData> stockData = tryGetStockData(lastUsedContainerBlockPos);
-                    if(stockData.isPresent()) {
+                    if (stockData.isPresent()) {
                         Optional<ItemQuantityAndSlots> itemStock = stockData.get().getItemStock(item);
                         if (itemStock.isPresent()) {
                             OptionalInt slotId = screen.getScreenHandler().getSlotIndex(playerInventory, i);
@@ -270,9 +261,8 @@ public class Sorter
         return false;
     }
 
-    public Optional<ContainerStockData> tryGetStockData(BlockPos blockPos)
-    {
-        if(stockData.containsKey(blockPos))
+    public Optional<ContainerStockData> tryGetStockData(BlockPos blockPos) {
+        if (stockData.containsKey(blockPos))
             return Optional.of(stockData.get(blockPos));
         return Optional.empty();
     }
@@ -282,20 +272,17 @@ public class Sorter
         markDirty();
     }
 
-    private <T extends ScreenHandler> boolean isValidSortingConditions(HandledScreen<T> screen)
-    {
+    private <T extends ScreenHandler> boolean isValidSortingConditions(HandledScreen<T> screen) {
         return isEnabled && isSortingEnabled && screen.getScreenHandler().getCursorStack().isEmpty();
     }
 
-    private <T extends ScreenHandler> boolean isValidQuickStackConditions(HandledScreen<T> screen)
-    {
+    private <T extends ScreenHandler> boolean isValidQuickStackConditions(HandledScreen<T> screen) {
         return isEnabled && isQuickStackEnabled && screen.getScreenHandler().getCursorStack().isEmpty();
     }
 
-    public void tryGenerateCreativeMenuOrderLookup()
-    {
+    public void tryGenerateCreativeMenuOrderLookup() {
         MinecraftClient client = MinecraftClient.getInstance();
-        if(creativeMenuOrder == null && client != null && client.player != null) {
+        if (creativeMenuOrder == null && client != null && client.player != null) {
             boolean shouldShowOperatorTab = client.options.getOperatorItemsTab().getValue() && client.player.isCreativeLevelTwoOp();
             ItemGroups.updateDisplayContext(client.player.networkHandler.getEnabledFeatures(), shouldShowOperatorTab, client.player.getWorld().getRegistryManager());
 
@@ -309,8 +296,7 @@ public class Sorter
         }
     }
 
-    public void markDirty()
-    {
+    public void markDirty() {
         tryGetStockData(lastUsedContainerBlockPos).ifPresent(IDirtyFlag::markDirty);
     }
 }

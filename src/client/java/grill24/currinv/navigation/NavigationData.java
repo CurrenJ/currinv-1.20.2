@@ -34,7 +34,7 @@ public class NavigationData {
             } else {
                 // Our little navigator is not perfect, and the world is a scary and unpredictable place.
                 // If we get lost, assume we're at the path step immediately before the most recent one. If still lost, repeat.
-                if(!hasArrivedAtDestination && System.currentTimeMillis() - timeArrivedAtCurrentNode > IS_LOST_TIMEOUT_MS) {
+                if (!hasArrivedAtDestination && System.currentTimeMillis() - timeArrivedAtCurrentNode > IS_LOST_TIMEOUT_MS) {
                     currentPathNodeIndex = Math.max(0, --currentPathNodeIndex);
                     timeArrivedAtCurrentNode = System.currentTimeMillis();
                     System.out.println("Lost! Resumed pathfinding at " + getCurrentNode());
@@ -51,7 +51,10 @@ public class NavigationData {
     public BlockPos getNextNode() {
         return path.get(currentPathNodeIndex + 1);
     }
-    public BlockPos getCurrentNode() { return path.get(currentPathNodeIndex); }
+
+    public BlockPos getCurrentNode() {
+        return path.get(currentPathNodeIndex);
+    }
 
     private boolean hasArrivedAtNextNode(ClientPlayerEntity player) {
 //        System.out.println("target: " + getNextNode().toCenterPos() + " | " + "player: " + player.getPos());
@@ -60,10 +63,9 @@ public class NavigationData {
             return true;
 
         if (currentPathNodeIndex + 2 < path.size()) {
-            if(hasArrivedAt(player, path.get(currentPathNodeIndex + 2))) {
+            if (hasArrivedAt(player, path.get(currentPathNodeIndex + 2))) {
                 return true;
-            }
-            else {
+            } else {
                 // Don't skip through diagonals
 //                boolean skippedNextNode = Node.isDirectlyAdjacent(getCurrentNode(), path.get(currentPathNodeIndex + 2))
 //                        && player.getPos().distanceTo(getNextNode().toCenterPos()) >= player.getPos().distanceTo(path.get(currentPathNodeIndex + 2).toCenterPos());
@@ -76,8 +78,7 @@ public class NavigationData {
         return false;
     }
 
-    private boolean hasArrivedAt(ClientPlayerEntity player, BlockPos blockPos)
-    {
+    private boolean hasArrivedAt(ClientPlayerEntity player, BlockPos blockPos) {
         double horiDistance = horizontalDistanceTo(player, blockPos);
         double vertDistance = Math.abs(player.getY() - blockPos.getY());
 
@@ -89,13 +90,11 @@ public class NavigationData {
         return Vector2d.distance(player.getX(), player.getZ(), blockCenter.getX(), blockCenter.getZ());
     }
 
-    private int getIndexOfClosestNode(ClientPlayerEntity player)
-    {
+    private int getIndexOfClosestNode(ClientPlayerEntity player) {
         int closestNodeIndex = currentPathNodeIndex;
         double closestDistance = player.getPos().distanceTo(Vec3d.of(getCurrentNode()));
-        for(int i = 0; i < path.size(); i++)
-        {
-            if(player.getPos().distanceTo(Vec3d.of(path.get(i))) < closestDistance)
+        for (int i = 0; i < path.size(); i++) {
+            if (player.getPos().distanceTo(Vec3d.of(path.get(i))) < closestDistance)
                 closestNodeIndex = i;
         }
         return closestNodeIndex;

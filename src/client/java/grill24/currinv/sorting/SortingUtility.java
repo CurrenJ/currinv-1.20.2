@@ -12,7 +12,6 @@ import net.minecraft.client.gui.screen.ingame.ShulkerBoxScreen;
 import net.minecraft.inventory.Inventory;
 import net.minecraft.item.Item;
 import net.minecraft.item.ItemStack;
-import net.minecraft.screen.ScreenHandler;
 import net.minecraft.screen.ShulkerBoxScreenHandler;
 import net.minecraft.screen.slot.SlotActionType;
 import net.minecraft.util.math.BlockPos;
@@ -25,14 +24,11 @@ import java.util.OptionalInt;
 public class SortingUtility {
     public static final int PLAYER_HOTBAR_SLOTS_END_INDEX = 9;
 
-    public static Optional<Inventory> tryGetInventoryFromScreen(HandledScreen<?> screen)
-    {
-        if(screen instanceof GenericContainerScreen)
-        {
+    public static Optional<Inventory> tryGetInventoryFromScreen(HandledScreen<?> screen) {
+        if (screen instanceof GenericContainerScreen) {
             return Optional.of(((GenericContainerScreen) screen).getScreenHandler().getInventory());
         }
-        if(screen instanceof ShulkerBoxScreen)
-        {
+        if (screen instanceof ShulkerBoxScreen) {
             ShulkerBoxScreenHandler shulkerBoxScreenHandler = ((ShulkerBoxScreen) screen).getScreenHandler();
             ScreenWithInventory screenWithInventory = ((ScreenWithInventory) shulkerBoxScreenHandler);
             return Optional.of(screenWithInventory.currinv_1_20_2$getInventory());
@@ -40,13 +36,11 @@ public class SortingUtility {
         return Optional.empty();
     }
 
-    public static void clickSlot(MinecraftClient client, HandledScreen<?> screen, int slotId)
-    {
+    public static void clickSlot(MinecraftClient client, HandledScreen<?> screen, int slotId) {
         clickSlot(client, screen, slotId, SlotActionType.PICKUP);
     }
 
-    public static void clickSlot(MinecraftClient client, HandledScreen<?> screen, int slotId, SlotActionType slotActionType)
-    {
+    public static void clickSlot(MinecraftClient client, HandledScreen<?> screen, int slotId, SlotActionType slotActionType) {
         assert client.interactionManager != null;
         client.interactionManager.clickSlot(screen.getScreenHandler().syncId, slotId, 0, slotActionType, client.player);
     }
@@ -55,7 +49,7 @@ public class SortingUtility {
         assert client.player != null;
         Inventory playerInventory = client.player.getInventory();
 
-        if(screen instanceof HandledScreen<?> handledScreen) {
+        if (screen instanceof HandledScreen<?> handledScreen) {
             for (int i = PLAYER_HOTBAR_SLOTS_END_INDEX; i < playerInventory.size(); i++) {
                 ItemStack itemStack = playerInventory.getStack(i);
 
@@ -69,15 +63,13 @@ public class SortingUtility {
         }
     }
 
-    public static void collectItems(MinecraftClient client, Screen screen, List<Item> itemsToCollect, ContainerStockData stockData, boolean isAllowedToInsertIntoHotbar)
-    {
+    public static void collectItems(MinecraftClient client, Screen screen, List<Item> itemsToCollect, ContainerStockData stockData, boolean isAllowedToInsertIntoHotbar) {
         assert client.player != null;
         assert client.interactionManager != null;
 
-        if(!(screen instanceof HandledScreen<?>))
+        if (!(screen instanceof HandledScreen<?> handledScreen))
             return;
 
-        HandledScreen<?> handledScreen = (HandledScreen<?>) screen;
         Optional<Inventory> inventory = tryGetInventoryFromScreen(handledScreen);
         if (inventory.isPresent()) {
 
@@ -89,24 +81,24 @@ public class SortingUtility {
                         for (Integer slotId : stock.get().slotIds.get(CurrInvClient.sorter.lastUsedContainerBlockPos)) {
                             int pickupSlotIndex = handledScreen.getScreenHandler().getSlotIndex(inventory.get(), slotId).orElse(slotId);
                             if (inventory.get().getStack(slotId).getItem().equals(item)) {
-                                if(isAllowedToInsertIntoHotbar) {
+                                if (isAllowedToInsertIntoHotbar) {
                                     clickSlot(client, handledScreen, pickupSlotIndex, SlotActionType.QUICK_MOVE);
                                 } else {
                                     clickSlot(client, handledScreen, pickupSlotIndex);
 
                                     Inventory playerInventory = client.player.getInventory();
                                     for (int i = PLAYER_HOTBAR_SLOTS_END_INDEX; i < playerInventory.size(); i++) {
-                                        if(playerInventory.getStack(i).isEmpty() || (playerInventory.getStack(i).getItem().equals(item) && playerInventory.getStack(i).getCount() < playerInventory.getStack(i).getMaxCount())) {
+                                        if (playerInventory.getStack(i).isEmpty() || (playerInventory.getStack(i).getItem().equals(item) && playerInventory.getStack(i).getCount() < playerInventory.getStack(i).getMaxCount())) {
                                             int slotIndex = handledScreen.getScreenHandler().getSlotIndex(playerInventory, i).getAsInt();
                                             System.out.println(slotIndex);
                                             System.out.println(handledScreen.getScreenHandler().getCursorStack());
                                             clickSlot(client, handledScreen, slotIndex);
-                                            if(handledScreen.getScreenHandler().getCursorStack().isEmpty())
+                                            if (handledScreen.getScreenHandler().getCursorStack().isEmpty())
                                                 break;
                                         }
                                     }
 
-                                    if(!handledScreen.getScreenHandler().getCursorStack().isEmpty()) {
+                                    if (!handledScreen.getScreenHandler().getCursorStack().isEmpty()) {
                                         clickSlot(client, handledScreen, slotId);
                                     }
                                 }
@@ -125,20 +117,16 @@ public class SortingUtility {
     }
 
     public static BlockPos getOneBlockPosFromDoubleChests(MinecraftClient client, BlockPos pos, DoubleBlockProperties.Type chestHalfTypeToReturn) {
-        if(client.world != null && client.world.getBlockState(pos).getBlock() instanceof ChestBlock)
-        {
+        if (client.world != null && client.world.getBlockState(pos).getBlock() instanceof ChestBlock) {
             DoubleBlockProperties.Type type = ChestBlock.getDoubleBlockType(client.world.getBlockState(pos));
-            if(type == DoubleBlockProperties.Type.SINGLE)
+            if (type == DoubleBlockProperties.Type.SINGLE)
                 return pos;
             else {
-                for (BlockPos cardinal : getCardinals(pos))
-                {
-                    if(client.world.getBlockState(cardinal).getBlock() instanceof ChestBlock)
-                    {
+                for (BlockPos cardinal : getCardinals(pos)) {
+                    if (client.world.getBlockState(cardinal).getBlock() instanceof ChestBlock) {
                         DoubleBlockProperties.Type otherChestType = ChestBlock.getDoubleBlockType(client.world.getBlockState(cardinal));
-                        if(otherChestType != type && otherChestType != DoubleBlockProperties.Type.SINGLE && client.world.getBlockState(pos).get(ChestBlock.FACING) == client.world.getBlockState(cardinal).get(ChestBlock.FACING))
-                        {
-                            if(type == chestHalfTypeToReturn)
+                        if (otherChestType != type && otherChestType != DoubleBlockProperties.Type.SINGLE && client.world.getBlockState(pos).get(ChestBlock.FACING) == client.world.getBlockState(cardinal).get(ChestBlock.FACING)) {
+                            if (type == chestHalfTypeToReturn)
                                 return pos;
                             else
                                 return cardinal;
@@ -150,10 +138,9 @@ public class SortingUtility {
         return pos;
     }
 
-    public static LootableContainerBlockEntity getOneBlockEntityFromDoubleChests(MinecraftClient client, LootableContainerBlockEntity blockEntity)
-    {
+    public static LootableContainerBlockEntity getOneBlockEntityFromDoubleChests(MinecraftClient client, LootableContainerBlockEntity blockEntity) {
         BlockPos blockPos = getOneBlockPosFromDoubleChests(client, blockEntity.getPos());
-        if(client.world != null && client.world.getBlockEntity(blockPos) instanceof LootableContainerBlockEntity lootableContainerBlockEntity)
+        if (client.world != null && client.world.getBlockEntity(blockPos) instanceof LootableContainerBlockEntity lootableContainerBlockEntity)
             return lootableContainerBlockEntity;
         return blockEntity;
     }

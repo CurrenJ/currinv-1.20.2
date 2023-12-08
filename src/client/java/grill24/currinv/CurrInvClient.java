@@ -19,24 +19,24 @@ import net.minecraft.util.ActionResult;
 
 @Command("currInv")
 public class CurrInvClient implements ClientModInitializer {
-	public static Config config;
+    public static Config config;
 
-	public static Sorter sorter;
-	public static PlayerNavigator navigator;
-	public static FullSuiteSorter fullSuiteSorter;
+    public static Sorter sorter;
+    public static PlayerNavigator navigator;
+    public static FullSuiteSorter fullSuiteSorter;
 
-	@Override
-	public void onInitializeClient() {
-		config = new Config();
+    @Override
+    public void onInitializeClient() {
+        config = new Config();
 
-		sorter = new Sorter();
-		navigator = new PlayerNavigator();
-		fullSuiteSorter = new FullSuiteSorter();
+        sorter = new Sorter();
+        navigator = new PlayerNavigator();
+        fullSuiteSorter = new FullSuiteSorter();
 
-		registerUseBlockEvents();
+        registerUseBlockEvents();
 
-		CurrInvComponentRegistry.registerComponents();
-	}
+        CurrInvComponentRegistry.registerComponents();
+    }
 
 //	public static void registerTickEvents() {
 //		ClientTickEvents.END_CLIENT_TICK.register((client) -> {
@@ -50,24 +50,24 @@ public class CurrInvClient implements ClientModInitializer {
 //		});
 //	}
 
-	public static void registerUseBlockEvents() {
-		UseBlockCallback.EVENT.register((player, world, hand, hitResult) -> {
-			BlockEntity blockEntity = world.getBlockEntity(hitResult.getBlockPos());
-			if(world.isClient() && blockEntity instanceof LootableContainerBlockEntity) {
-				CurrInvClient.sorter.onUseContainer(MinecraftClient.getInstance(), ((LootableContainerBlockEntity) blockEntity));
-			};
-			return ActionResult.PASS;
-		});
-	}
+    public static void registerUseBlockEvents() {
+        UseBlockCallback.EVENT.register((player, world, hand, hitResult) -> {
+            BlockEntity blockEntity = world.getBlockEntity(hitResult.getBlockPos());
+            if (world.isClient() && blockEntity instanceof LootableContainerBlockEntity) {
+                CurrInvClient.sorter.onUseContainer(MinecraftClient.getInstance(), ((LootableContainerBlockEntity) blockEntity));
+            }
+            return ActionResult.PASS;
+        });
+    }
 
-	@CommandAction("info")
-	public static void printModInfo(CommandContext<FabricClientCommandSource> commandContext) {
-		DebugUtility.print(commandContext, toStringStatic());
-	}
+    @CommandAction("info")
+    public static void printModInfo(CommandContext<FabricClientCommandSource> commandContext) {
+        DebugUtility.print(commandContext, toStringStatic());
+    }
 
-	@StaticToString
-	public static String toStringStatic() {
-		return "CurrInv is a mod developed by Curren Jeandell.";
-	}
+    @StaticToString
+    public static String toStringStatic() {
+        return "CurrInv is a mod developed by Curren Jeandell.";
+    }
 }
 

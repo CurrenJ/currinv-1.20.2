@@ -1,6 +1,7 @@
 package grill24.currinv.navigation;
 
-import net.minecraft.block.*;
+import net.minecraft.block.BlockState;
+import net.minecraft.block.Blocks;
 import net.minecraft.client.network.ClientPlayerEntity;
 import net.minecraft.client.world.ClientWorld;
 import net.minecraft.registry.tag.FluidTags;
@@ -102,9 +103,9 @@ public class Node {
 
     public int getWeight(ClientWorld world) {
         BlockState blockState = world.getBlockState(this.blockPos);
-        if(blockState.getFluidState().isIn(FluidTags.WATER))
+        if (blockState.getFluidState().isIn(FluidTags.WATER))
             return 2;
-        else if(blockState.getBlock().equals(Blocks.COBWEB))
+        else if (blockState.getBlock().equals(Blocks.COBWEB))
             return 100;
         else
             return 1;

@@ -38,22 +38,21 @@ public class PlayerNavigator implements IClientPlayerController {
     public boolean debugParticlesEnabled = false;
 
 
-    public PlayerNavigator()
-    {
+    public PlayerNavigator() {
     }
 
-    public boolean isNavigating()
-    {
+    public boolean isNavigating() {
         return navigationData != null && navigationData.isNavigating();
     }
 
-    public boolean isSearchingForPath() { return pathfinder != null && pathfinder.isStarted() && !pathfinder.isFinished(); }
+    public boolean isSearchingForPath() {
+        return pathfinder != null && pathfinder.isStarted() && !pathfinder.isFinished();
+    }
 
 
     @ClientTick
-    public void onUpdate(MinecraftClient client)
-    {
-        if(client.player != null && client.world != null) {
+    public void onUpdate(MinecraftClient client) {
+        if (client.player != null && client.world != null) {
             if (navigationData != null && playerController != null) {
                 boolean arrived = navigationData.onUpdate(client.world, client.player);
                 playerController.onUpdate(client);
@@ -71,39 +70,35 @@ public class PlayerNavigator implements IClientPlayerController {
         }
     }
 
-    public boolean startNavigationToPosition(BlockPos start, BlockPos goal, boolean acceptHighestElevationAlternativeGoal, long executionTimeLimit)
-    {
+    public boolean startNavigationToPosition(BlockPos start, BlockPos goal, boolean acceptHighestElevationAlternativeGoal, long executionTimeLimit) {
         pathfinder = new AStarAsyncMinecraft(acceptHighestElevationAlternativeGoal, executionTimeLimit);
         pathfinder.tryStartPathfinding(start, goal);
 
         return true;
     }
 
-    public boolean startNavigationToPosition(BlockPos start, BlockPos goal, boolean acceptHighestElevationAlternativeGoal)
-    {
+    public boolean startNavigationToPosition(BlockPos start, BlockPos goal, boolean acceptHighestElevationAlternativeGoal) {
         pathfinder = new AStarAsyncMinecraft(acceptHighestElevationAlternativeGoal, 20000);
         pathfinder.tryStartPathfinding(start, goal);
 
         return true;
     }
 
-    public boolean startNavigationToPosition(BlockPos start, BlockPos goal)
-    {
+    public boolean startNavigationToPosition(BlockPos start, BlockPos goal) {
         pathfinder = new AStarAsyncMinecraft(false, 20000);
         pathfinder.tryStartPathfinding(start, goal);
 
         return true;
     }
 
-    private void startNavigationByPath(List<BlockPos> path)
-    {
+    private void startNavigationByPath(List<BlockPos> path) {
         navigationData = new NavigationData(path);
         playerController = new LookAndAdvanceClientPlayerController(navigationData);
     }
 
     @CommandAction("toMarker")
     public void navigateToMarker(MinecraftClient client) {
-        if(client.world != null && client.player != null) {
+        if (client.world != null && client.player != null) {
             navigateToMarker(client.world, client.player, markerBlock);
         }
     }
@@ -111,10 +106,10 @@ public class PlayerNavigator implements IClientPlayerController {
     private void navigateToMarker(ClientWorld world, ClientPlayerEntity player, Block block) {
         BlockPos playerPos = player.getBlockPos();
 
-        if(navigateIfMarker(world, player, block, player.getBlockX(), player.getBlockY(), player.getBlockZ()))
+        if (navigateIfMarker(world, player, block, player.getBlockX(), player.getBlockY(), player.getBlockZ()))
             return;
 
-        for (int cubeSideLength = 3; cubeSideLength <= MAX_MARKER_SEARCH_RADIUS; cubeSideLength+=2) {
+        for (int cubeSideLength = 3; cubeSideLength <= MAX_MARKER_SEARCH_RADIUS; cubeSideLength += 2) {
             // Each iteration of this outerloop is O(n^2) where n is cubeSideLength. It's better than the other solutions.
 
             // Shift cube to center it
@@ -132,22 +127,19 @@ public class PlayerNavigator implements IClientPlayerController {
                 }
             }
 
-            if(closestMarkerBlockPos != null && startNavigationToPosition(player.getBlockPos(), closestMarkerBlockPos.up(), false))
+            if (closestMarkerBlockPos != null && startNavigationToPosition(player.getBlockPos(), closestMarkerBlockPos.up(), false))
                 break;
         }
     }
 
-    private boolean isBlockAtPos(ClientWorld world, Block block, BlockPos pos)
-    {
+    private boolean isBlockAtPos(ClientWorld world, Block block, BlockPos pos) {
         return world.getBlockState(pos).getBlock().equals(block);
     }
 
-    private BlockPos getCloserMarker(ClientWorld world, BlockPos playerPos, Block markerBlock, BlockPos pos, BlockPos lastClosestPos)
-    {
+    private BlockPos getCloserMarker(ClientWorld world, BlockPos playerPos, Block markerBlock, BlockPos pos, BlockPos lastClosestPos) {
         BlockPos posWithPlayerOffset = pos.add(playerPos);
-        if(isBlockAtPos(world, markerBlock, posWithPlayerOffset))
-        {
-            if(lastClosestPos == null)
+        if (isBlockAtPos(world, markerBlock, posWithPlayerOffset)) {
+            if (lastClosestPos == null)
                 return posWithPlayerOffset;
 
             return playerPos.getManhattanDistance(posWithPlayerOffset) < playerPos.getManhattanDistance(lastClosestPos)
@@ -156,8 +148,7 @@ public class PlayerNavigator implements IClientPlayerController {
         return lastClosestPos;
     }
 
-    private boolean navigateIfMarker(ClientWorld world, ClientPlayerEntity player, Block block, int x, int y, int z)
-    {
+    private boolean navigateIfMarker(ClientWorld world, ClientPlayerEntity player, Block block, int x, int y, int z) {
         BlockPos searchPos = new BlockPos(x, y, z).add(player.getBlockPos());
         if (world.getBlockState(searchPos).getBlock().equals(block)) {
             return startNavigationToPosition(player.getBlockPos(), searchPos.up(), false);
@@ -166,9 +157,8 @@ public class PlayerNavigator implements IClientPlayerController {
     }
 
     @CommandAction("escapeRope")
-    public void navigateEscapeRope(MinecraftClient client)
-    {
-        if(client.world != null && client.player != null) {
+    public void navigateEscapeRope(MinecraftClient client) {
+        if (client.world != null && client.player != null) {
             BlockPos playerPos = client.player.getBlockPos();
 
             for (int y = 320; y > playerPos.getY(); y--) {
@@ -182,14 +172,13 @@ public class PlayerNavigator implements IClientPlayerController {
         }
     }
 
-    public void reset()
-    {
+    public void reset() {
         navigationData = null;
     }
 
     @Override
     public boolean shouldJump(boolean jumping) {
-        if(playerController != null)
+        if (playerController != null)
             return playerController.shouldJump(jumping);
         else
             return jumping;
@@ -197,7 +186,7 @@ public class PlayerNavigator implements IClientPlayerController {
 
     @Override
     public float getMovementForward(float movementForward, GameOptions settings) {
-        if(playerController != null)
+        if (playerController != null)
             return playerController.getMovementForward(movementForward, settings);
         else
             return movementForward;
@@ -205,7 +194,7 @@ public class PlayerNavigator implements IClientPlayerController {
 
     @Override
     public float getMovementSideways(float movementSideways, GameOptions settings) {
-        if(playerController != null)
+        if (playerController != null)
             return playerController.getMovementSideways(movementSideways, settings);
         else
             return movementSideways;
@@ -213,7 +202,7 @@ public class PlayerNavigator implements IClientPlayerController {
 
     @Override
     public Vector2d getPitchAndYaw(Vector2d pitchAndYaw, ClientPlayerEntity player) {
-        if(playerController != null)
+        if (playerController != null)
             return playerController.getPitchAndYaw(pitchAndYaw, player);
         else
             return pitchAndYaw;
@@ -221,9 +210,8 @@ public class PlayerNavigator implements IClientPlayerController {
 
     // ----- Debug -----
     @ClientTick(20)
-    public void updateDebugParticles(MinecraftClient client)
-    {
-        if(debugParticlesEnabled)
+    public void updateDebugParticles(MinecraftClient client) {
+        if (debugParticlesEnabled)
             DebugParticles.setDebugParticles(DebugParticles.NAVIGATION_PARTICLE_KEY, DebugUtility.getNavigationParticles(CurrInvClient.navigator.navigationData), ParticleTypes.END_ROD, DebugParticles.DebugParticleData.RenderType.PATH);
         else
             DebugParticles.clearDebugParticles(DebugParticles.NAVIGATION_PARTICLE_KEY);

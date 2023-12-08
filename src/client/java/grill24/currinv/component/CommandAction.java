@@ -14,6 +14,7 @@ public @interface CommandAction {
     String value();
 
     Class<? extends ArgumentType>[] arguments() default {};
+
     String[] argumentKeys() default {};
 }
 

@@ -1,7 +1,6 @@
 package grill24.currinv.mixin.client;
 
 import grill24.currinv.CurrInvClient;
-import grill24.currinv.navigation.NavigationData;
 import net.minecraft.client.input.Input;
 import net.minecraft.client.input.KeyboardInput;
 import net.minecraft.client.option.GameOptions;
@@ -14,13 +13,14 @@ import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
 @Mixin(KeyboardInput.class)
-public abstract class KeyboardInputMixin extends Input
-{
-    @Shadow @Final private GameOptions settings;
+public abstract class KeyboardInputMixin extends Input {
+    @Shadow
+    @Final
+    private GameOptions settings;
 
     @Inject(at = @At("TAIL"), method = "tick(ZF)V")
     private void tick(boolean slowDown, float slowDownFactor, CallbackInfo ci) {
-        if(isMovementKeyPressed())
+        if (isMovementKeyPressed())
             CurrInvClient.navigator.reset();
 
         this.movementForward = CurrInvClient.navigator.getMovementForward(this.movementForward, settings);
@@ -28,8 +28,7 @@ public abstract class KeyboardInputMixin extends Input
     }
 
     @Unique
-    public boolean isMovementKeyPressed()
-    {
+    public boolean isMovementKeyPressed() {
         return settings.forwardKey.isPressed()
                 || settings.backKey.isPressed()
                 || settings.leftKey.isPressed()

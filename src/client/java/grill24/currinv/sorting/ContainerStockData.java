@@ -9,20 +9,18 @@ import net.minecraft.util.math.BlockPos;
 import java.util.*;
 
 public class ContainerStockData implements IDirtyFlag {
-    private HashMap<Item, ItemQuantityAndSlots> stock;
-    private ArrayList<ItemQuantityAndSlots> orderedStock;
+    private final HashMap<Item, ItemQuantityAndSlots> stock;
+    private final ArrayList<ItemQuantityAndSlots> orderedStock;
     private boolean isDirty;
 
-    ContainerStockData()
-    {
+    ContainerStockData() {
         isDirty = false;
 
         stock = new HashMap<>();
         orderedStock = new ArrayList<>();
     }
 
-    ContainerStockData(BlockPos blockPos, Inventory inventory)
-    {
+    ContainerStockData(BlockPos blockPos, Inventory inventory) {
         isDirty = true;
 
         stock = new HashMap<>();
@@ -31,18 +29,15 @@ public class ContainerStockData implements IDirtyFlag {
         inventoryInventory(blockPos, inventory);
     }
 
-    ContainerStockData(List<ContainerStockData> containerStockData)
-    {
+    ContainerStockData(List<ContainerStockData> containerStockData) {
         isDirty = false;
 
         stock = new HashMap<>();
         orderedStock = new ArrayList<>();
 
         // Merge all stock data into one
-        for(ContainerStockData containerStockDatum : containerStockData)
-        {
-            for(Map.Entry<Item, ItemQuantityAndSlots> entry : containerStockDatum.getStock().entrySet())
-            {
+        for (ContainerStockData containerStockDatum : containerStockData) {
+            for (Map.Entry<Item, ItemQuantityAndSlots> entry : containerStockDatum.getStock().entrySet()) {
                 ItemQuantityAndSlots itemQuantityAndSlots = stock.getOrDefault(entry.getKey(), new ItemQuantityAndSlots(entry.getKey()));
                 itemQuantityAndSlots.incrementQuantity(entry.getValue().quantity);
                 // Add slot ids
@@ -59,15 +54,13 @@ public class ContainerStockData implements IDirtyFlag {
 
 
     // Inventories an inventory.
-    public void inventoryInventory(BlockPos blockPos, Inventory inventory)
-    {
+    public void inventoryInventory(BlockPos blockPos, Inventory inventory) {
         stock.clear();
         // Count total quantities of items and save which slots they are in
-        for(int slotId = 0; slotId < inventory.size(); slotId++)
-        {
+        for (int slotId = 0; slotId < inventory.size(); slotId++) {
             ItemStack itemStack = inventory.getStack(slotId);
             Item item = itemStack.getItem();
-            if(!itemStack.isEmpty()) {
+            if (!itemStack.isEmpty()) {
                 ItemQuantityAndSlots itemQuantityAndSlots = stock.getOrDefault(item, new ItemQuantityAndSlots(item));
                 itemQuantityAndSlots.incrementQuantity(itemStack.getCount());
                 itemQuantityAndSlots.addSlotId(blockPos, slotId);
@@ -78,39 +71,33 @@ public class ContainerStockData implements IDirtyFlag {
         orderStock();
     }
 
-    public Optional<ItemQuantityAndSlots> getItemStock(Item item)
-    {
+    public Optional<ItemQuantityAndSlots> getItemStock(Item item) {
         return Optional.ofNullable(stock.getOrDefault(item, null));
     }
 
-    public HashMap<Item, ItemQuantityAndSlots> getStock()
-    {
+    public HashMap<Item, ItemQuantityAndSlots> getStock() {
         return stock;
     }
 
-    public void orderStock()
-    {
+    public void orderStock() {
         orderedStock.clear();
-        for (Map.Entry<Item, ItemQuantityAndSlots> entry: stock.entrySet()) {
+        for (Map.Entry<Item, ItemQuantityAndSlots> entry : stock.entrySet()) {
 //            System.out.println(entry.getValue());
             orderedStock.add(entry.getValue());
         }
         orderedStock.sort(Collections.reverseOrder());
     }
 
-    public ArrayList<ItemQuantityAndSlots> getOrderedStock()
-    {
+    public ArrayList<ItemQuantityAndSlots> getOrderedStock() {
         return orderedStock;
     }
 
-    public void reset()
-    {
+    public void reset() {
         stock.clear();
     }
 
     @Override
-    public void markDirty()
-    {
+    public void markDirty() {
         isDirty = true;
     }
 
@@ -120,8 +107,7 @@ public class ContainerStockData implements IDirtyFlag {
     }
 
     @Override
-    public boolean isDirty()
-    {
+    public boolean isDirty() {
         return isDirty;
     }
 }

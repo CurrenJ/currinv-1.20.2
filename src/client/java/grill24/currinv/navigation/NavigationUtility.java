@@ -61,8 +61,7 @@ public class NavigationUtility {
         return (canPathfindThrough(world, blockPos) || world.getBlockState(blockPos).getBlock() instanceof CarpetBlock) && canPathfindThrough(world, blockPos.up());
     }
 
-    public static boolean isNotLava(ClientWorld world, BlockPos pos)
-    {
+    public static boolean isNotLava(ClientWorld world, BlockPos pos) {
         return !world.getBlockState(pos).getFluidState().isIn(FluidTags.LAVA);
     }
 
@@ -92,16 +91,15 @@ public class NavigationUtility {
         return cardinals;
     }
 
-    public static Vector2d getPitchAndYawToLookTowardsBlockFace(ClientPlayerEntity player, BlockPos pos)
-    {
+    public static Vector2d getPitchAndYawToLookTowardsBlockFace(ClientPlayerEntity player, BlockPos pos) {
         Vec3d playerBodyPos = player.getPos();
         Vec3d playerHeadPos = new Vec3d(playerBodyPos.x, player.getEyeY(), playerBodyPos.z);
 
         Vec3d target = pos.toCenterPos();
         Vec3i vi = pos.subtract(player.getBlockPos());
         Direction dirFacingPos = Direction.fromVector(vi.getX(), 0, vi.getZ());
-        if(dirFacingPos != null)
-            target = target.offset(dirFacingPos.getOpposite(), 0.5 - 1/16.0);
+        if (dirFacingPos != null)
+            target = target.offset(dirFacingPos.getOpposite(), 0.5 - 1 / 16.0);
         else {
             System.out.println("Direction is null!");
             System.out.println("Player: " + player.getBlockX() + ", " + player.getBlockY() + ", " + player.getBlockZ());

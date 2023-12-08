@@ -1,6 +1,5 @@
 package grill24.currinv.component;
 
-import com.mojang.brigadier.context.CommandContext;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.gui.screen.Screen;
 
@@ -75,7 +74,7 @@ public class ComponentUtility {
 
     public static String toStringStatic(Class<?> clazz) {
         Method method = getStaticToStringMethod(clazz);
-        if(method != null) {
+        if (method != null) {
             try {
                 return method.invoke(null).toString();
             } catch (IllegalAccessException | InvocationTargetException e) {
@@ -91,7 +90,7 @@ public class ComponentUtility {
                 || (parameterTypes.length == 1 && parameterTypes[0] == MinecraftClient.class)
                 || (parameterTypes.length == 1 && parameterTypes[0] == Screen.class)
                 || (parameterTypes.length == 2 && parameterTypes[0] == MinecraftClient.class && parameterTypes[1] == Screen.class);
-        if(!correctParameters)
+        if (!correctParameters)
             System.out.println("WARNING: Incorrect parameters for screen tick method: " + method.getName());
         return correctParameters;
     }
@@ -121,7 +120,7 @@ public class ComponentUtility {
         Class<?>[] parameterTypes = method.getParameterTypes();
         boolean correctParameters = parameterTypes.length == 0
                 || (parameterTypes.length == 1 && parameterTypes[0] == MinecraftClient.class);
-        if(!correctParameters)
+        if (!correctParameters)
             System.out.println("WARNING: Incorrect parameters for client tick method: " + method.getName());
         return correctParameters;
     }

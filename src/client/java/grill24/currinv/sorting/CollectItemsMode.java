@@ -4,7 +4,6 @@ import net.minecraft.block.entity.LootableContainerBlockEntity;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.gui.screen.Screen;
 import net.minecraft.item.Item;
-import net.minecraft.screen.ScreenHandler;
 import net.minecraft.util.math.BlockPos;
 
 import java.util.ArrayList;
@@ -15,10 +14,11 @@ public class CollectItemsMode implements IFullSuiteSorterMode {
 
     private List<Item> itemsToCollect;
     private ContainerStockData allContainersStockData;
+
     @Override
     public List<LootableContainerBlockEntity> getContainersToVisit(MinecraftClient client) {
         ArrayList<LootableContainerBlockEntity> containersWithItems = new ArrayList<>();
-        if(client.world != null) {
+        if (client.world != null) {
 
             for (Item item : itemsToCollect) {
                 Optional<ItemQuantityAndSlots> stock = allContainersStockData.getItemStock(item);

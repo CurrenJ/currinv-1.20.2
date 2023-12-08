@@ -6,7 +6,6 @@ import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.gui.screen.Screen;
 import net.minecraft.item.Item;
 import net.minecraft.item.Items;
-import net.minecraft.screen.ScreenHandler;
 import net.minecraft.util.math.BlockPos;
 
 import java.util.*;
@@ -15,23 +14,25 @@ public class ConsolidateAndSortMode implements IFullSuiteSorterMode {
 
     private List<Instruction> instructions;
 
-    private record Instruction(BlockPos pos, State state, Item item) {}
+    private record Instruction(BlockPos pos, State state, Item item) {
+    }
 
     private enum State {
         Gather,
         Consolidate,
         Sort,
     }
+
     @Override
     public List<LootableContainerBlockEntity> getContainersToVisit(MinecraftClient client) {
         generateInstructions(client, CurrInvClient.fullSuiteSorter.allContainersStockData);
 
         ArrayList<LootableContainerBlockEntity> containersToVisit = new ArrayList<>();
 
-        if(client.world != null) {
+        if (client.world != null) {
 
             for (Instruction instruction : instructions) {
-                if(client.world.getBlockEntity(instruction.pos) instanceof LootableContainerBlockEntity blockEntity)
+                if (client.world.getBlockEntity(instruction.pos) instanceof LootableContainerBlockEntity blockEntity)
                     containersToVisit.add(blockEntity);
             }
 
@@ -43,7 +44,7 @@ public class ConsolidateAndSortMode implements IFullSuiteSorterMode {
     @Override
     public boolean doContainerScreenInteractionTick(MinecraftClient client, Screen screen, List<LootableContainerBlockEntity> containersToVisit, int currentContainerIndex) {
 
-        if(instructions.size() <= currentContainerIndex)
+        if (instructions.size() <= currentContainerIndex)
             return true;
 
 
@@ -60,7 +61,7 @@ public class ConsolidateAndSortMode implements IFullSuiteSorterMode {
                 instructions.set(currentContainerIndex, new Instruction(instruction.pos, State.Sort, instruction.item));
                 break;
             case Sort:
-                if(!CurrInvClient.sorter.isSorting) {
+                if (!CurrInvClient.sorter.isSorting) {
                     CurrInvClient.sorter.isSortingEnabled = false;
                     return true;
                 }
@@ -79,7 +80,7 @@ public class ConsolidateAndSortMode implements IFullSuiteSorterMode {
 
         allContainersStockData.getStock().forEach((item, itemQuantityAndSlots) -> {
             // Don't consolidate shulker boxes
-            if(!item.equals(Items.SHULKER_BOX)) {
+            if (!item.equals(Items.SHULKER_BOX)) {
 
                 LinkedHashSet<ItemQuantityAndSlots> containers = new LinkedHashSet<>();
                 LinkedHashSet<BlockPos> containerPositions = new LinkedHashSet<>();

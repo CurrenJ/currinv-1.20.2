@@ -1,9 +1,11 @@
 package grill24.currinv.sorting;
 
-import net.minecraft.block.entity.*;
+import net.minecraft.block.entity.BlockEntity;
+import net.minecraft.block.entity.ChestBlockEntity;
+import net.minecraft.block.entity.LootableContainerBlockEntity;
+import net.minecraft.block.entity.ShulkerBoxBlockEntity;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.gui.screen.Screen;
-import net.minecraft.screen.ScreenHandler;
 
 import java.util.ArrayList;
 import java.util.LinkedHashSet;
@@ -16,7 +18,7 @@ public class ScanNearbyChestsMode implements IFullSuiteSorterMode {
         int containerLimit = 100;
 
         LinkedHashSet<LootableContainerBlockEntity> containersToVisit = new LinkedHashSet<>();
-        if(client.world != null && client.player != null) {
+        if (client.world != null && client.player != null) {
 
             for (int x = -searchRadius; x < searchRadius; x++) {
                 for (int y = -searchRadius; y < searchRadius; y++) {
@@ -27,7 +29,7 @@ public class ScanNearbyChestsMode implements IFullSuiteSorterMode {
                         BlockEntity blockEntity = client.world.getBlockEntity(client.player.getBlockPos().add(x, y, z));
                         if (blockEntity instanceof ChestBlockEntity || blockEntity instanceof ShulkerBoxBlockEntity) {
                             LootableContainerBlockEntity lootableContainerBlockEntity = ((LootableContainerBlockEntity) blockEntity);
-                            if(!containersToVisit.contains(lootableContainerBlockEntity))
+                            if (!containersToVisit.contains(lootableContainerBlockEntity))
                                 containersToVisit.add(SortingUtility.getOneBlockEntityFromDoubleChests(client, lootableContainerBlockEntity));
                         }
                     }

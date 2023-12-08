@@ -4,7 +4,6 @@ import com.mojang.brigadier.context.CommandContext;
 import grill24.currinv.navigation.NavigationData;
 import net.fabricmc.fabric.api.client.command.v2.FabricClientCommandSource;
 import net.minecraft.client.MinecraftClient;
-import net.minecraft.client.world.ClientWorld;
 import net.minecraft.text.Text;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.Vec3d;
@@ -16,7 +15,7 @@ import java.util.List;
 public class DebugUtility {
 
     public static List<BlockPos> getNavigationParticles(NavigationData navigationData) {
-        if(navigationData == null)
+        if (navigationData == null)
             return new ArrayList<>();
 
         List<BlockPos> pathAheadOfPlayer = navigationData.getPath();
@@ -24,7 +23,7 @@ public class DebugUtility {
         for (int i = 0; i < pathAheadOfPlayer.size(); i++) {
             BlockPos pathNode = pathAheadOfPlayer.get(i);
             if (pathNode.equals(currentNode)) {
-                pathAheadOfPlayer = pathAheadOfPlayer.subList(i, Math.min(pathAheadOfPlayer.size(), i+24));
+                pathAheadOfPlayer = pathAheadOfPlayer.subList(i, Math.min(pathAheadOfPlayer.size(), i + 24));
                 break;
             }
         }
@@ -34,9 +33,9 @@ public class DebugUtility {
 
     public static List<Vec3d> interpolateBetweenPoints(Vec3d from, Vec3d to, int numPoints) {
         // interpolate between from and to
-        if(from == null)
+        if (from == null)
             return Collections.singletonList(to);
-        if(to == null)
+        if (to == null)
             return Collections.singletonList(from);
 
         List<Vec3d> points = new ArrayList<>();
@@ -51,8 +50,7 @@ public class DebugUtility {
     }
 
     public static void print(CommandContext<?> commandContext, String message) {
-        if(commandContext.getSource() instanceof FabricClientCommandSource)
-        {
+        if (commandContext.getSource() instanceof FabricClientCommandSource) {
             ((FabricClientCommandSource) commandContext.getSource()).sendFeedback(Text.literal(message));
         }
     }
@@ -61,8 +59,7 @@ public class DebugUtility {
         client.inGameHud.getChatHud().addMessage(Text.of(message));
     }
 
-    static List<Vec3d> getCorners(BlockPos pos)
-    {
+    static List<Vec3d> getCorners(BlockPos pos) {
         List<Vec3d> corners = new ArrayList<>();
         corners.add(new Vec3d(pos.getX(), pos.getY(), pos.getZ()));
         corners.add(new Vec3d(pos.getX() + 1, pos.getY(), pos.getZ()));
@@ -75,8 +72,7 @@ public class DebugUtility {
         return corners;
     }
 
-    static List<Vec3d> getEdgeCenters(BlockPos pos)
-    {
+    static List<Vec3d> getEdgeCenters(BlockPos pos) {
         List<Vec3d> edgeCenters = new ArrayList<>();
         edgeCenters.add(new Vec3d(pos.getX() + 0.5, pos.getY(), pos.getZ()));
         edgeCenters.add(new Vec3d(pos.getX() + 1, pos.getY(), pos.getZ() + 0.5));
