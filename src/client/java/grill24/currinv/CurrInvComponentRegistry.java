@@ -90,6 +90,9 @@ public class CurrInvComponentRegistry {
         });
     }
 
+    /**
+     * Register tick events for all methods with {@link ClientTick} annotations.
+     */
     public static void registerTickEvents() {
         for (ComponentDto component : CurrInvComponentRegistry.COMPONENTS) {
             for (Method method : ComponentUtility.getClientTickMethods(component.clazz)) {
@@ -107,6 +110,9 @@ public class CurrInvComponentRegistry {
         });
     }
 
+    /**
+     * Register screen tick events for all methods with {@link ScreenTick} or {@link ScreenInit} annotations..
+     */
     public static void registerScreenTickEvents() {
         for (ComponentDto component : CurrInvComponentRegistry.COMPONENTS) {
             for (Method method : ComponentUtility.getScreenTickMethods(component.clazz)) {
@@ -165,7 +171,7 @@ public class CurrInvComponentRegistry {
     }
 
     /**
-     * Build command from an object component who's class has the {@link Command} annotation.
+     * Build command from an object component whose class has the {@link Command} annotation.
      */
     private static LiteralArgumentBuilder<FabricClientCommandSource> buildCommandsFromAnnotations(ComponentDto component, CommandRegistryAccess commandRegistryAccess) {
         MinecraftClient client = MinecraftClient.getInstance();
@@ -175,6 +181,7 @@ public class CurrInvComponentRegistry {
 
             if (ComponentUtility.hasCustomClassAnnotation(clazz, Command.class)) {
                 Command annotation = clazz.getAnnotation(Command.class);
+                String commandKey = annotation.value().isEmpty() ? ComponentUtility.convertDeclarationToCamel(clazz.getSimpleName()) : annotation.value();
 
                 com.mojang.brigadier.Command<FabricClientCommandSource> printInstance = (context) -> {
                     if (component.instance != null)
@@ -184,7 +191,7 @@ public class CurrInvComponentRegistry {
                     return 1;
                 };
 
-                LiteralArgumentBuilder<FabricClientCommandSource> command = ClientCommandManager.literal(annotation.value()).executes(printInstance);
+                LiteralArgumentBuilder<FabricClientCommandSource> command = ClientCommandManager.literal(commandKey).executes(printInstance);
 
 
                 for (LiteralArgumentBuilder<FabricClientCommandSource> subCommand : buildCommandsFromFields(component)) {
@@ -211,6 +218,7 @@ public class CurrInvComponentRegistry {
         for (Field field : ComponentUtility.getCommandOptionFields(clazz)) {
             Class<?> fieldClass = field.getType();
             CommandOption optionAnnotation = field.getAnnotation(CommandOption.class);
+            String optionKey = optionAnnotation.value().isEmpty() ? ComponentUtility.convertDeclarationToCamel(field.getName()) : optionAnnotation.value();
 
             ArgumentType<?> argumentType = null;
             SuggestionProvider<FabricClientCommandSource> suggestionProvider = null;
@@ -219,7 +227,7 @@ public class CurrInvComponentRegistry {
             com.mojang.brigadier.Command<FabricClientCommandSource> noOptionProvidedFunc = (context -> {
                 try {
                     field.setAccessible(true);
-                    DebugUtility.print(context, optionAnnotation.value() + "=" + field.get(component.instance));
+                    DebugUtility.print(context, optionKey + "=" + field.get(component.instance));
                     return 1;
                 } catch (IllegalAccessException e) {
                     e.printStackTrace();
@@ -243,7 +251,7 @@ public class CurrInvComponentRegistry {
                 setFieldValue = (context) -> {
                     try {
                         field.setAccessible(true);
-                        field.set(component.instance, Enum.valueOf((Class<Enum>) fieldClass, ComponentUtility.convertCamelToSnake(context.getArgument(optionAnnotation.value(), String.class)).toUpperCase()));
+                        field.set(component.instance, Enum.valueOf((Class<Enum>) fieldClass, ComponentUtility.convertCamelToSnake(context.getArgument(optionKey, String.class)).toUpperCase()));
                         return 1;
                     } catch (IllegalAccessException e) {
                         e.printStackTrace();
@@ -256,7 +264,7 @@ public class CurrInvComponentRegistry {
                 setFieldValue = (context) -> {
                     try {
                         field.setAccessible(true);
-                        field.set(component.instance, context.getArgument(optionAnnotation.value(), boolean.class));
+                        field.set(component.instance, context.getArgument(optionKey, boolean.class));
                         return 1;
                     } catch (IllegalAccessException e) {
                         e.printStackTrace();
@@ -269,7 +277,7 @@ public class CurrInvComponentRegistry {
                     try {
                         field.setAccessible(true);
                         field.set(component.instance, !field.getBoolean(component.instance));
-                        DebugUtility.print(context, optionAnnotation.value() + "=" + field.get(component.instance));
+                        DebugUtility.print(context, optionKey + "=" + field.get(component.instance));
                         return 1;
                     } catch (IllegalAccessException e) {
                         e.printStackTrace();
@@ -279,12 +287,12 @@ public class CurrInvComponentRegistry {
             }
 
 
-            LiteralArgumentBuilder<FabricClientCommandSource> subCommand = ClientCommandManager.literal(optionAnnotation.value());
+            LiteralArgumentBuilder<FabricClientCommandSource> subCommand = ClientCommandManager.literal(optionKey);
             // Build the subCommand option
             if (noOptionProvidedFunc != null)
                 subCommand = subCommand.executes(noOptionProvidedFunc);
             if (argumentType != null && setFieldValue != null) {
-                RequiredArgumentBuilder<FabricClientCommandSource, ?> argument = ClientCommandManager.argument(optionAnnotation.value(), argumentType);
+                RequiredArgumentBuilder<FabricClientCommandSource, ?> argument = ClientCommandManager.argument(optionKey, argumentType);
                 if (suggestionProvider != null)
                     argument = argument.suggests(suggestionProvider);
                 argument.executes(setFieldValue);
@@ -307,6 +315,7 @@ public class CurrInvComponentRegistry {
         List<LiteralArgumentBuilder<FabricClientCommandSource>> commands = new ArrayList<>();
         for (Method method : ComponentUtility.getCommandActionMethods(clazz)) {
             CommandAction actionAnnotation = method.getAnnotation(CommandAction.class);
+            String actionKey = actionAnnotation.value().isEmpty() ? ComponentUtility.convertDeclarationToCamel(method.getName()) : actionAnnotation.value();
 
             com.mojang.brigadier.Command<FabricClientCommandSource> action = (context) -> {
                 try {
@@ -347,7 +356,7 @@ public class CurrInvComponentRegistry {
                 throw new RuntimeException("Number of argument types does not match number of argument keys for subCommand action method: " + method.getName());
             }
 
-            LiteralArgumentBuilder<FabricClientCommandSource> subCommand = ClientCommandManager.literal(actionAnnotation.value());
+            LiteralArgumentBuilder<FabricClientCommandSource> subCommand = ClientCommandManager.literal(actionKey);
             if (commandArgument != null)
                 subCommand = subCommand.then(commandArgument.executes(action));
             else

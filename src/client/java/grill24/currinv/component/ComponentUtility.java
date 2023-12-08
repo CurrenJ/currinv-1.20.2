@@ -50,6 +50,10 @@ public class ComponentUtility {
         return snakeCase.toString();
     }
 
+    public static String convertDeclarationToCamel(String declaration) {
+        return Character.toLowerCase(declaration.charAt(0)) + declaration.substring(1);
+    }
+
     public static Method[] getScreenTickMethods(Class<?> clazz) {
         Method[] methods = clazz.getDeclaredMethods();
         return Arrays.stream(methods)

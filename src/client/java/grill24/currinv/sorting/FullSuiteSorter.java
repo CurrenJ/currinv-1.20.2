@@ -30,7 +30,7 @@ import java.util.Collections;
 import java.util.List;
 import java.util.stream.IntStream;
 
-@Command("fullSuiteSorter")
+@Command
 public class FullSuiteSorter {
     private List<LootableContainerBlockEntity> containersToVisit;
     private int containerIndex;

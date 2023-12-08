@@ -26,14 +26,14 @@ import java.util.HashMap;
 import java.util.Optional;
 import java.util.OptionalInt;
 
-@Command("sorter")
+@Command
 public class Sorter {
     public boolean isEnabled, isSorting;
 
-    @CommandOption("isSortingEnabled")
+    @CommandOption()
     public boolean isSortingEnabled;
 
-    @CommandOption("isQuickStackEnabled")
+    @CommandOption
     public boolean isQuickStackEnabled;
     private int currentSortingSlotId, currentStockIndex, currentStockSlotIdsIndex;
 
