@@ -3,7 +3,7 @@ package grill24.currinv.sorting;
 import grill24.currinv.CurrInvClient;
 import net.minecraft.block.entity.LootableContainerBlockEntity;
 import net.minecraft.client.MinecraftClient;
-import net.minecraft.client.gui.screen.ingame.HandledScreen;
+import net.minecraft.client.gui.screen.Screen;
 import net.minecraft.item.Item;
 import net.minecraft.item.Items;
 import net.minecraft.screen.ScreenHandler;
@@ -41,7 +41,7 @@ public class ConsolidateAndSortMode implements IFullSuiteSorterMode {
     }
 
     @Override
-    public <T extends ScreenHandler> boolean doContainerScreenInteractionTick(MinecraftClient client, HandledScreen<T> screen, List<LootableContainerBlockEntity> containersToVisit, int currentContainerIndex) {
+    public boolean doContainerScreenInteractionTick(MinecraftClient client, Screen screen, List<LootableContainerBlockEntity> containersToVisit, int currentContainerIndex) {
 
         if(instructions.size() <= currentContainerIndex)
             return true;

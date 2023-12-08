@@ -1,8 +1,10 @@
 package grill24.currinv.debug;
 
 import com.mojang.brigadier.context.CommandContext;
+import grill24.currinv.component.ClientTick;
+import grill24.currinv.component.Command;
+import grill24.currinv.component.CommandOption;
 import grill24.currinv.navigation.NavigationData;
-import net.fabricmc.loader.impl.lib.sat4j.core.Vec;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.network.ClientPlayerEntity;
 import net.minecraft.client.world.ClientWorld;
@@ -15,9 +17,11 @@ import java.util.HashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
 
+@Command("debugParticles")
 public class DebugParticles {
 
-    public static boolean isEnabled;
+    @CommandOption("allParticlesEnabled")
+    public static boolean isEnabled = true;
 
     public static final String NAVIGATION_PARTICLE_KEY = "navigation";
     public static final String SORTING_PARTICLE_KEY = "fullSuiteSorterTargets";
@@ -44,6 +48,7 @@ public class DebugParticles {
         }
     }
 
+    @ClientTick(60)
     public static void spawnParticles(MinecraftClient client)
     {
         if(isEnabled)

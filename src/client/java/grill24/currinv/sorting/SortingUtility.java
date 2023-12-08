@@ -5,6 +5,7 @@ import net.minecraft.block.ChestBlock;
 import net.minecraft.block.DoubleBlockProperties;
 import net.minecraft.block.entity.LootableContainerBlockEntity;
 import net.minecraft.client.MinecraftClient;
+import net.minecraft.client.gui.screen.Screen;
 import net.minecraft.client.gui.screen.ingame.GenericContainerScreen;
 import net.minecraft.client.gui.screen.ingame.HandledScreen;
 import net.minecraft.client.gui.screen.ingame.ShulkerBoxScreen;
@@ -24,7 +25,7 @@ import java.util.OptionalInt;
 public class SortingUtility {
     public static final int PLAYER_HOTBAR_SLOTS_END_INDEX = 9;
 
-    public static <T extends ScreenHandler> Optional<Inventory> tryGetInventoryFromScreen(HandledScreen<T> screen)
+    public static Optional<Inventory> tryGetInventoryFromScreen(HandledScreen<?> screen)
     {
         if(screen instanceof GenericContainerScreen)
         {
@@ -39,39 +40,45 @@ public class SortingUtility {
         return Optional.empty();
     }
 
-    public static <T extends ScreenHandler> void clickSlot(MinecraftClient client, HandledScreen<T> screen, int slotId)
+    public static void clickSlot(MinecraftClient client, HandledScreen<?> screen, int slotId)
     {
         clickSlot(client, screen, slotId, SlotActionType.PICKUP);
     }
 
-    public static <T extends ScreenHandler> void clickSlot(MinecraftClient client, HandledScreen<T> screen, int slotId, SlotActionType slotActionType)
+    public static void clickSlot(MinecraftClient client, HandledScreen<?> screen, int slotId, SlotActionType slotActionType)
     {
         assert client.interactionManager != null;
         client.interactionManager.clickSlot(screen.getScreenHandler().syncId, slotId, 0, slotActionType, client.player);
     }
 
-    public static <T extends ScreenHandler> void depositItem(MinecraftClient client, HandledScreen<T> screen, Item item) {
+    public static void depositItem(MinecraftClient client, Screen screen, Item item) {
         assert client.player != null;
         Inventory playerInventory = client.player.getInventory();
 
-        for (int i = PLAYER_HOTBAR_SLOTS_END_INDEX; i < playerInventory.size(); i++) {
-            ItemStack itemStack = playerInventory.getStack(i);
+        if(screen instanceof HandledScreen<?> handledScreen) {
+            for (int i = PLAYER_HOTBAR_SLOTS_END_INDEX; i < playerInventory.size(); i++) {
+                ItemStack itemStack = playerInventory.getStack(i);
 
-            if (itemStack.getItem().equals(item)) {
-                OptionalInt slotId = screen.getScreenHandler().getSlotIndex(playerInventory, i);
-                if (slotId.isPresent()) {
-                    clickSlot(client, screen, slotId.getAsInt(), SlotActionType.QUICK_MOVE);
+                if (itemStack.getItem().equals(item)) {
+                    OptionalInt slotId = handledScreen.getScreenHandler().getSlotIndex(playerInventory, i);
+                    if (slotId.isPresent()) {
+                        clickSlot(client, handledScreen, slotId.getAsInt(), SlotActionType.QUICK_MOVE);
+                    }
                 }
             }
         }
     }
 
-    public static <T extends ScreenHandler> void collectItems(MinecraftClient client, HandledScreen<T> screen, List<Item> itemsToCollect, ContainerStockData stockData, boolean isAllowedToInsertIntoHotbar)
+    public static void collectItems(MinecraftClient client, Screen screen, List<Item> itemsToCollect, ContainerStockData stockData, boolean isAllowedToInsertIntoHotbar)
     {
         assert client.player != null;
         assert client.interactionManager != null;
 
-        Optional<Inventory> inventory = tryGetInventoryFromScreen(screen);
+        if(!(screen instanceof HandledScreen<?>))
+            return;
+
+        HandledScreen<?> handledScreen = (HandledScreen<?>) screen;
+        Optional<Inventory> inventory = tryGetInventoryFromScreen(handledScreen);
         if (inventory.isPresent()) {
 
             for (Item item : itemsToCollect) {
@@ -80,27 +87,27 @@ public class SortingUtility {
                     // TODO: Not use this field from another class.
                     if (stock.get().slotIds.containsKey(CurrInvClient.sorter.lastUsedContainerBlockPos)) {
                         for (Integer slotId : stock.get().slotIds.get(CurrInvClient.sorter.lastUsedContainerBlockPos)) {
-                            int pickupSlotIndex = screen.getScreenHandler().getSlotIndex(inventory.get(), slotId).orElse(slotId);
+                            int pickupSlotIndex = handledScreen.getScreenHandler().getSlotIndex(inventory.get(), slotId).orElse(slotId);
                             if (inventory.get().getStack(slotId).getItem().equals(item)) {
                                 if(isAllowedToInsertIntoHotbar) {
-                                    clickSlot(client, screen, pickupSlotIndex, SlotActionType.QUICK_MOVE);
+                                    clickSlot(client, handledScreen, pickupSlotIndex, SlotActionType.QUICK_MOVE);
                                 } else {
-                                    clickSlot(client, screen, pickupSlotIndex);
+                                    clickSlot(client, handledScreen, pickupSlotIndex);
 
                                     Inventory playerInventory = client.player.getInventory();
                                     for (int i = PLAYER_HOTBAR_SLOTS_END_INDEX; i < playerInventory.size(); i++) {
                                         if(playerInventory.getStack(i).isEmpty() || (playerInventory.getStack(i).getItem().equals(item) && playerInventory.getStack(i).getCount() < playerInventory.getStack(i).getMaxCount())) {
-                                            int slotIndex = screen.getScreenHandler().getSlotIndex(playerInventory, i).getAsInt();
+                                            int slotIndex = handledScreen.getScreenHandler().getSlotIndex(playerInventory, i).getAsInt();
                                             System.out.println(slotIndex);
-                                            System.out.println(screen.getScreenHandler().getCursorStack());
-                                            clickSlot(client, screen, slotIndex);
-                                            if(screen.getScreenHandler().getCursorStack().isEmpty())
+                                            System.out.println(handledScreen.getScreenHandler().getCursorStack());
+                                            clickSlot(client, handledScreen, slotIndex);
+                                            if(handledScreen.getScreenHandler().getCursorStack().isEmpty())
                                                 break;
                                         }
                                     }
 
-                                    if(!screen.getScreenHandler().getCursorStack().isEmpty()) {
-                                        clickSlot(client, screen, slotId);
+                                    if(!handledScreen.getScreenHandler().getCursorStack().isEmpty()) {
+                                        clickSlot(client, handledScreen, slotId);
                                     }
                                 }
                             }
@@ -110,7 +117,7 @@ public class SortingUtility {
             }
 
         }
-        CurrInvClient.sorter.tryInventoryScreen(screen);
+        CurrInvClient.sorter.tryInventoryScreen(handledScreen);
     }
 
     public static BlockPos getOneBlockPosFromDoubleChests(MinecraftClient client, BlockPos pos) {

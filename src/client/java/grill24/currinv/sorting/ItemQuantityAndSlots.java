@@ -48,7 +48,7 @@ public class ItemQuantityAndSlots implements Comparable<ItemQuantityAndSlots> {
 
     @Override
     public int compareTo(@NotNull ItemQuantityAndSlots o) {
-        return switch (CurrInvClient.sorter.currentSortingStyle) {
+        return switch (CurrInvClient.config.currentSortingStyle) {
             case QUANTITY -> compareByQuantity(o);
             case LEXICOGRAPHICAL -> compareByLexicographical(o);
             case CREATIVE_MENU -> compareByCreativeMenuOrder(o);

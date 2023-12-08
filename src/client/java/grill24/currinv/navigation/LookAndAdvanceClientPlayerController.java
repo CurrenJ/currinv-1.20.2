@@ -2,6 +2,7 @@ package grill24.currinv.navigation;
 
 import grill24.currinv.CurrInvClient;
 import net.minecraft.block.Blocks;
+import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.network.ClientPlayerEntity;
 import net.minecraft.client.option.GameOptions;
 import net.minecraft.client.world.ClientWorld;
@@ -28,8 +29,11 @@ public class LookAndAdvanceClientPlayerController extends ClientPlayerController
     }
 
     @Override
-    public void onUpdate(ClientWorld world, ClientPlayerEntity player) {
-        if(CurrInvClient.navigator.isNavigating()) {
+    public void onUpdate(MinecraftClient client) {
+        if(CurrInvClient.navigator.isNavigating() && client.player != null && client.world != null) {
+            ClientWorld world = client.world;
+            ClientPlayerEntity player = client.player;
+
             isOnGround = player.isOnGround();
 
             // player.isSubmergedInWater() || world.getBlockState(player.getBlockPos()).getFluidState().isIn(FluidTags.WATER)

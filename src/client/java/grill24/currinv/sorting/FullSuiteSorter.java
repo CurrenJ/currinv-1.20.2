@@ -1,16 +1,21 @@
 package grill24.currinv.sorting;
 
+import com.mojang.brigadier.context.CommandContext;
 import grill24.currinv.CurrInvClient;
+import grill24.currinv.component.*;
 import grill24.currinv.debug.DebugParticles;
 import grill24.currinv.debug.DebugUtility;
 import grill24.currinv.navigation.NavigationUtility;
+import net.fabricmc.fabric.api.client.command.v2.FabricClientCommandSource;
 import net.minecraft.block.DoubleBlockProperties;
 import net.minecraft.block.entity.BlockEntity;
 import net.minecraft.block.entity.LootableContainerBlockEntity;
 import net.minecraft.client.MinecraftClient;
+import net.minecraft.client.gui.screen.Screen;
 import net.minecraft.client.gui.screen.ingame.HandledScreen;
 import net.minecraft.client.network.ClientPlayerEntity;
 import net.minecraft.client.world.ClientWorld;
+import net.minecraft.command.argument.ItemStackArgumentType;
 import net.minecraft.entity.decoration.ItemFrameEntity;
 import net.minecraft.item.Item;
 import net.minecraft.particle.ParticleTypes;
@@ -19,14 +24,13 @@ import net.minecraft.util.ActionResult;
 import net.minecraft.util.Hand;
 import net.minecraft.util.hit.BlockHitResult;
 import net.minecraft.util.hit.EntityHitResult;
-import net.minecraft.util.hit.HitResult;
 import net.minecraft.util.math.BlockPos;
-import org.jetbrains.annotations.NotNull;
 import org.joml.Vector2d;
 
 import java.util.*;
 import java.util.stream.IntStream;
 
+@Command("fullSuiteSorter")
 public class FullSuiteSorter {
     private List<LootableContainerBlockEntity> containersToVisit;
     private int containerIndex;
@@ -51,8 +55,13 @@ public class FullSuiteSorter {
 
     private IFullSuiteSorterMode mode;
 
+    @CommandOption("debug")
     public boolean isDebugModeEnabled;
+
+    @CommandOption("debugParticles")
     public boolean isDebugParticlesEnabled;
+
+    @CommandOption("debugVerbose")
     public boolean isDebugVerbose;
 
     public FullSuiteSorter() {
@@ -61,33 +70,43 @@ public class FullSuiteSorter {
         allContainersStockData = new ContainerStockData();
     }
 
-    public void tryStart() {
+    public void tryStart(CommandContext<FabricClientCommandSource> commandContext) {
         if(state == State.IDLE) {
+            DebugUtility.print(commandContext, "Starting full-suite sorter operation...");
             state = State.START;
         } else {
+            DebugUtility.print(commandContext, "Canceling full-suite sorter operation...");
             finish();
         }
     }
 
-    public void analyzeNearbyContainers() {
+    @CommandAction("scan")
+    public void analyzeNearbyContainers(CommandContext<FabricClientCommandSource> commandContext) {
         mode = new ScanNearbyChestsMode();
-        tryStart();
+
+        tryStart(commandContext);
     }
 
-    public void takeItemsFromNearbyContainers(@NotNull List<Item> items)
+    @CommandAction(value = "collect", arguments = {ItemStackArgumentType.class}, argumentKeys = {"item"})
+    public void takeItemsFromNearbyContainers(CommandContext<FabricClientCommandSource> commandContext)
     {
         mode = new CollectItemsMode();
         CollectItemsMode collectItemsMode = (CollectItemsMode) mode;
-        collectItemsMode.setItemsToCollect(items);
+        Item item = ItemStackArgumentType.getItemStackArgument(commandContext, "item").getItem();
+        collectItemsMode.setItemsToCollect(Collections.singletonList(item));
         collectItemsMode.setStockData(allContainersStockData);
-        tryStart();
+
+        tryStart(commandContext);
     }
 
-    public void consolidateAndSort() {
+    @CommandAction("consolidate")
+    public void consolidateAndSort(CommandContext<FabricClientCommandSource> commandContext) {
         mode = new ConsolidateAndSortMode();
-        tryStart();
+
+        tryStart(commandContext);
     }
 
+    @ClientTick
     public void onUpdateTick(MinecraftClient client) {
         assert client.player != null;
         switch (state) {
@@ -128,7 +147,8 @@ public class FullSuiteSorter {
         lastState = state;
     }
 
-    public <T extends ScreenHandler> void onScreenUpdateTick(MinecraftClient client, HandledScreen<T> screen)
+    @ScreenTick
+    public void onScreenUpdateTick(MinecraftClient client, Screen screen)
     {
         switch (state) {
             case DO_CONTAINER_SCREEN_INTERACTION:
@@ -293,7 +313,7 @@ public class FullSuiteSorter {
             state = State.CLOSE_CONTAINER;
     }
 
-    private <T extends ScreenHandler> void doContainerScreenInteraction(MinecraftClient client, HandledScreen<T> screen) {
+    private void doContainerScreenInteraction(MinecraftClient client, Screen screen) {
         if(mode.doContainerScreenInteractionTick(client, screen, containersToVisit, containerIndex))
             state = State.CLOSE_CONTAINER;
     }
@@ -328,6 +348,8 @@ public class FullSuiteSorter {
         CurrInvClient.sorter.isSortingEnabled = false;
 
         state = State.IDLE;
+
+        DebugUtility.print(MinecraftClient.getInstance(), "Full-suite sorter operation finished.");
     }
 
     private void onStateChanged(MinecraftClient client)
@@ -412,13 +434,11 @@ public class FullSuiteSorter {
         return NavigationUtility.canPlayerStandOnBlockBelow(world, player, blockPos) && NavigationUtility.hasSpaceForPlayerToStandAtBlockPos(world, player, blockPos);
     }
 
-    private boolean isDoneSorting() {
-        return state == State.FINISH;
-    }
-
     // ---- Debug ----
-    public void updateDebugParticles(boolean isEnabled) {
-        if (isEnabled && state != State.IDLE) {
+
+    @ClientTick
+    public void updateDebugParticles() {
+        if (isDebugParticlesEnabled && state != State.IDLE) {
             if(containerIndex < containersToVisit.size()) {
                 BlockPos activeContainer = containersToVisit.get(containerIndex).getPos();
 

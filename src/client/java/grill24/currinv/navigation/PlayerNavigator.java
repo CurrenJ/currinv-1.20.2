@@ -1,30 +1,41 @@
 package grill24.currinv.navigation;
 
+import grill24.currinv.CurrInvClient;
+import grill24.currinv.component.ClientTick;
+import grill24.currinv.component.Command;
+import grill24.currinv.component.CommandAction;
+import grill24.currinv.component.CommandOption;
+import grill24.currinv.debug.DebugParticles;
+import grill24.currinv.debug.DebugUtility;
 import net.minecraft.block.Block;
 import net.minecraft.block.Blocks;
 import net.minecraft.block.LeavesBlock;
+import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.network.ClientPlayerEntity;
 import net.minecraft.client.option.GameOptions;
 import net.minecraft.client.world.ClientWorld;
+import net.minecraft.particle.ParticleTypes;
 import net.minecraft.util.math.BlockPos;
 import org.joml.Vector2d;
 
 import java.util.List;
 import java.util.Optional;
 
+@Command("nav")
 public class PlayerNavigator implements IClientPlayerController {
 
     private static final int MAX_MARKER_SEARCH_RADIUS = 512;
 
     AStarAsyncMinecraft pathfinder;
 
-    public enum NavigationMode { TO_MARKER, ESCAPE_ROPE }
-    public NavigationMode navigationMode;
     public Block markerBlock = Blocks.CHISELED_NETHER_BRICKS;
 
     public NavigationData navigationData;
 
     public ClientPlayerController playerController;
+
+    @CommandOption("debugParticles")
+    public boolean debugParticlesEnabled = false;
 
 
     public PlayerNavigator()
@@ -39,31 +50,24 @@ public class PlayerNavigator implements IClientPlayerController {
     public boolean isSearchingForPath() { return pathfinder != null && pathfinder.isStarted() && !pathfinder.isFinished(); }
 
 
-    public void onUpdate(ClientWorld world, ClientPlayerEntity player)
+    @ClientTick
+    public void onUpdate(MinecraftClient client)
     {
-        if(navigationData != null && playerController != null && player != null) {
-            boolean arrived = navigationData.onUpdate(world, player);
-            playerController.onUpdate(world, player);
-            if(arrived)
-               reset();
-        } else {
-            if(pathfinder != null && pathfinder.isStarted() && !pathfinder.isFinished()) {
-                pathfinder.onUpdate(world, player);
-                if(pathfinder.isFinished()) {
-                    Optional<List<BlockPos>> path = pathfinder.tryGetPath();
-                    path.ifPresent(this::startNavigationByPath);
+        if(client.player != null && client.world != null) {
+            if (navigationData != null && playerController != null) {
+                boolean arrived = navigationData.onUpdate(client.world, client.player);
+                playerController.onUpdate(client);
+                if (arrived)
+                    reset();
+            } else {
+                if (pathfinder != null && pathfinder.isStarted() && !pathfinder.isFinished()) {
+                    pathfinder.onUpdate(client.world, client.player);
+                    if (pathfinder.isFinished()) {
+                        Optional<List<BlockPos>> path = pathfinder.tryGetPath();
+                        path.ifPresent(this::startNavigationByPath);
+                    }
                 }
             }
-        }
-    }
-
-    public void startNavigation(ClientWorld world, ClientPlayerEntity player, NavigationMode navigationMode)
-    {
-        reset();
-        switch (navigationMode)
-        {
-            case TO_MARKER -> navigateToMarker(world, player, markerBlock);
-            case ESCAPE_ROPE -> navigateEscapeRope(world, player);
         }
     }
 
@@ -97,7 +101,14 @@ public class PlayerNavigator implements IClientPlayerController {
         playerController = new LookAndAdvanceClientPlayerController(navigationData);
     }
 
-    public void navigateToMarker(ClientWorld world, ClientPlayerEntity player, Block block) {
+    @CommandAction("toMarker")
+    public void navigateToMarker(MinecraftClient client) {
+        if(client.world != null && client.player != null) {
+            navigateToMarker(client.world, client.player, markerBlock);
+        }
+    }
+
+    private void navigateToMarker(ClientWorld world, ClientPlayerEntity player, Block block) {
         BlockPos playerPos = player.getBlockPos();
 
         if(navigateIfMarker(world, player, block, player.getBlockX(), player.getBlockY(), player.getBlockZ()))
@@ -154,18 +165,19 @@ public class PlayerNavigator implements IClientPlayerController {
         return false;
     }
 
-    private void navigateEscapeRope(ClientWorld world, ClientPlayerEntity player)
+    @CommandAction("escapeRope")
+    public void navigateEscapeRope(MinecraftClient client)
     {
-        BlockPos playerPos = player.getBlockPos();
+        if(client.world != null && client.player != null) {
+            BlockPos playerPos = client.player.getBlockPos();
 
-        for(int y = 320; y > playerPos.getY(); y--)
-        {
-            BlockPos searchPos = new BlockPos(playerPos.getX(), y, playerPos.getZ());
-            Block block = world.getBlockState(searchPos).getBlock();
-            if(!(world.isAir(searchPos) || block instanceof LeavesBlock))
-            {
-                startNavigationToPosition(player.getBlockPos(), searchPos.up(), true);
-                break;
+            for (int y = 320; y > playerPos.getY(); y--) {
+                BlockPos searchPos = new BlockPos(playerPos.getX(), y, playerPos.getZ());
+                Block block = client.world.getBlockState(searchPos).getBlock();
+                if (!(client.world.isAir(searchPos) || block instanceof LeavesBlock)) {
+                    startNavigationToPosition(client.player.getBlockPos(), searchPos.up(), true);
+                    break;
+                }
             }
         }
     }
@@ -205,5 +217,15 @@ public class PlayerNavigator implements IClientPlayerController {
             return playerController.getPitchAndYaw(pitchAndYaw, player);
         else
             return pitchAndYaw;
+    }
+
+    // ----- Debug -----
+    @ClientTick(20)
+    public void updateDebugParticles(MinecraftClient client)
+    {
+        if(debugParticlesEnabled)
+            DebugParticles.setDebugParticles(DebugParticles.NAVIGATION_PARTICLE_KEY, DebugUtility.getNavigationParticles(CurrInvClient.navigator.navigationData), ParticleTypes.END_ROD, DebugParticles.DebugParticleData.RenderType.PATH);
+        else
+            DebugParticles.clearDebugParticles(DebugParticles.NAVIGATION_PARTICLE_KEY);
     }
 }

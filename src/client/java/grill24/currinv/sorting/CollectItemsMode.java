@@ -2,7 +2,7 @@ package grill24.currinv.sorting;
 
 import net.minecraft.block.entity.LootableContainerBlockEntity;
 import net.minecraft.client.MinecraftClient;
-import net.minecraft.client.gui.screen.ingame.HandledScreen;
+import net.minecraft.client.gui.screen.Screen;
 import net.minecraft.item.Item;
 import net.minecraft.screen.ScreenHandler;
 import net.minecraft.util.math.BlockPos;
@@ -38,7 +38,7 @@ public class CollectItemsMode implements IFullSuiteSorterMode {
     }
 
     @Override
-    public <T extends ScreenHandler> boolean doContainerScreenInteractionTick(MinecraftClient client, HandledScreen<T> screen, List<LootableContainerBlockEntity> containersToVisit, int currentContainerIndex) {
+    public boolean doContainerScreenInteractionTick(MinecraftClient client, Screen screen, List<LootableContainerBlockEntity> containersToVisit, int currentContainerIndex) {
         SortingUtility.collectItems(client, screen, itemsToCollect, allContainersStockData, false);
         return true;
     }

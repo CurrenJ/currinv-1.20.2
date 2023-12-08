@@ -1,5 +1,6 @@
 package grill24.currinv.navigation;
 
+import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.network.ClientPlayerEntity;
 import net.minecraft.client.option.GameOptions;
 import net.minecraft.client.world.ClientWorld;
@@ -15,7 +16,7 @@ public abstract class ClientPlayerController implements IClientPlayerController 
     }
 
     @Override
-    public abstract void onUpdate(ClientWorld world, ClientPlayerEntity player);
+    public abstract void onUpdate(MinecraftClient client);
 
     @Override
     public abstract boolean shouldJump(boolean jumping);

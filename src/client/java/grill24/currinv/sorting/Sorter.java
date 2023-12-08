@@ -2,8 +2,13 @@ package grill24.currinv.sorting;
 
 import grill24.currinv.CurrInvClient;
 import grill24.currinv.IDirtyFlag;
+import grill24.currinv.component.Command;
+import grill24.currinv.component.CommandOption;
+import grill24.currinv.component.ScreenInit;
+import grill24.currinv.component.ScreenTick;
 import net.minecraft.block.entity.LootableContainerBlockEntity;
 import net.minecraft.client.MinecraftClient;
+import net.minecraft.client.gui.screen.Screen;
 import net.minecraft.client.gui.screen.ingame.HandledScreen;
 import net.minecraft.inventory.Inventory;
 import net.minecraft.item.Item;
@@ -12,14 +17,22 @@ import net.minecraft.item.ItemGroups;
 import net.minecraft.item.ItemStack;
 import net.minecraft.registry.Registries;
 import net.minecraft.screen.ScreenHandler;
+import net.minecraft.screen.ScreenHandlerListener;
 import net.minecraft.screen.slot.SlotActionType;
 import net.minecraft.util.math.BlockPos;
 
 import java.util.*;
 
+@Command("sorter")
 public class Sorter
 {
-    public boolean isEnabled, isSortingEnabled, isQuickStackEnabled, isSorting;
+    public boolean isEnabled, isSorting;
+
+    @CommandOption("isSortingEnabled")
+    public boolean isSortingEnabled;
+
+    @CommandOption("isQuickStackEnabled")
+    public boolean isQuickStackEnabled;
     private int currentSortingSlotId, currentStockIndex, currentStockSlotIdsIndex;
 
     public BlockPos lastUsedContainerBlockPos;
@@ -45,27 +58,42 @@ public class Sorter
         stockData = new HashMap<>();
     }
 
-    public <T extends ScreenHandler> void onUpdate(MinecraftClient client, HandledScreen<T> screen)
+    @ScreenTick
+    public void onUpdate(MinecraftClient client, Screen screen)
     {
-        if(isEnabled) {
-            Optional<Inventory> screenInventoryOptional = SortingUtility.tryGetInventoryFromScreen(screen);
+        if(isEnabled && screen instanceof HandledScreen<?> handledScreen) {
+            Optional<Inventory> screenInventoryOptional = SortingUtility.tryGetInventoryFromScreen(handledScreen);
             if (screenInventoryOptional.isPresent()) {
-                tryInventoryScreen(screen);
+                tryInventoryScreen(handledScreen);
                 Optional<ContainerStockData> containerStockData = tryGetStockData(lastUsedContainerBlockPos);
                 if (containerStockData.isPresent()) {
                     if (!isSorting && containerStockData.get().isDirty()) {
                         stopSorting();
-                        tryQuickStack(client, screen);
-                        tryStartSortContainer(screen);
+                        tryQuickStack(client, handledScreen);
+                        tryStartSortContainer(handledScreen);
                         containerStockData.get().markClean();
                     }
 
-                    tryDoSortingTick(client, screen);
+                    tryDoSortingTick(client, handledScreen);
                 } else {
                     stopSorting();
                 }
             }
         }
+    }
+
+    @ScreenInit
+    public void onScreenInit(MinecraftClient client, Screen screen) {
+        HandledScreen<?> handledScreen = ((HandledScreen<?>) screen);
+        handledScreen.getScreenHandler().addListener(new ScreenHandlerListener() {
+            @Override
+            public void onSlotUpdate(ScreenHandler handler, int slotId, ItemStack stack) {
+                CurrInvClient.sorter.markDirty();
+            }
+
+            @Override
+            public void onPropertyUpdate(ScreenHandler handler, int property, int value) {}
+        });
     }
 
     public <T extends ScreenHandler> boolean tryInventoryScreen(HandledScreen<T> screen)

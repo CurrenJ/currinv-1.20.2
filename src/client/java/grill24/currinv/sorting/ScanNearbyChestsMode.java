@@ -2,9 +2,8 @@ package grill24.currinv.sorting;
 
 import net.minecraft.block.entity.*;
 import net.minecraft.client.MinecraftClient;
-import net.minecraft.client.gui.screen.ingame.HandledScreen;
+import net.minecraft.client.gui.screen.Screen;
 import net.minecraft.screen.ScreenHandler;
-import net.minecraft.util.math.BlockPos;
 
 import java.util.ArrayList;
 import java.util.LinkedHashSet;
@@ -40,7 +39,7 @@ public class ScanNearbyChestsMode implements IFullSuiteSorterMode {
     }
 
     @Override
-    public <T extends ScreenHandler> boolean doContainerScreenInteractionTick(MinecraftClient client, HandledScreen<T> screen, List<LootableContainerBlockEntity> containersToVisit, int currentContainerIndex) {
+    public boolean doContainerScreenInteractionTick(MinecraftClient client, Screen screen, List<LootableContainerBlockEntity> containersToVisit, int currentContainerIndex) {
         return true;
     }
 

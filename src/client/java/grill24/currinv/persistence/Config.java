@@ -1,20 +1,20 @@
 package grill24.currinv.persistence;
 
+import grill24.currinv.component.Command;
+import grill24.currinv.component.CommandOption;
 import grill24.currinv.sorting.Sorter;
 import net.minecraft.nbt.NbtCompound;
 
+@Command("config")
 public class Config implements IPersistable {
     private final static String DATA_FILE_NAME = "config.dat";
 
-    private final static String CURRENT_SORTING_STYLE_KEY = "currentSortingStyle";
+    private final static String CURRENT_SORTING_STYLE_KEY = "sortingStyle";
+    @CommandOption(CURRENT_SORTING_STYLE_KEY)
     public Sorter.SortingStyle currentSortingStyle = Sorter.SortingStyle.QUANTITY;
+
     public Config() {
         PersistenceManager.load(this);
-    }
-
-    public void setSortingStyle(Sorter.SortingStyle style) {
-        currentSortingStyle = style;
-        PersistenceManager.save(this);
     }
 
     @Override
