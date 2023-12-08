@@ -30,7 +30,7 @@ import java.util.OptionalInt;
 public class Sorter {
     public boolean isEnabled, isSorting;
 
-    @CommandOption()
+    @CommandOption
     public boolean isSortingEnabled;
 
     @CommandOption

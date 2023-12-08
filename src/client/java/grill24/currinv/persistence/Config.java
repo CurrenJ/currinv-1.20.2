@@ -10,11 +10,16 @@ public class Config implements IPersistable {
     private final static String DATA_FILE_NAME = "config.dat";
 
     private final static String CURRENT_SORTING_STYLE_KEY = "sortingStyle";
-    @CommandOption(CURRENT_SORTING_STYLE_KEY)
+    @CommandOption(value = CURRENT_SORTING_STYLE_KEY, setter = "setCurrentSortingStyle")
     public Sorter.SortingStyle currentSortingStyle = Sorter.SortingStyle.QUANTITY;
 
     public Config() {
         PersistenceManager.load(this);
+    }
+
+    public void setCurrentSortingStyle(Sorter.SortingStyle currentSortingStyle) {
+        this.currentSortingStyle = currentSortingStyle;
+        PersistenceManager.save(this);
     }
 
     @Override

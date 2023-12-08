@@ -11,6 +11,9 @@ import com.mojang.brigadier.suggestion.SuggestionProvider;
 import com.mojang.brigadier.suggestion.Suggestions;
 import com.mojang.brigadier.suggestion.SuggestionsBuilder;
 import grill24.currinv.component.*;
+import grill24.currinv.component.accessor.GetFieldValue;
+import grill24.currinv.component.accessor.GetNewFieldValue;
+import grill24.currinv.component.accessor.SetNewFieldValue;
 import grill24.currinv.debug.DebugParticles;
 import grill24.currinv.debug.DebugUtility;
 import net.fabricmc.fabric.api.client.command.v2.ClientCommandManager;
@@ -25,6 +28,7 @@ import net.minecraft.command.CommandRegistryAccess;
 import net.minecraft.command.argument.ItemStackArgumentType;
 
 import java.lang.reflect.Field;
+import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.lang.reflect.Parameter;
 import java.util.ArrayList;
@@ -220,21 +224,51 @@ public class CurrInvComponentRegistry {
             CommandOption optionAnnotation = field.getAnnotation(CommandOption.class);
             String optionKey = optionAnnotation.value().isEmpty() ? ComponentUtility.convertDeclarationToCamel(field.getName()) : optionAnnotation.value();
 
-            ArgumentType<?> argumentType = null;
-            SuggestionProvider<FabricClientCommandSource> suggestionProvider = null;
-            com.mojang.brigadier.Command<FabricClientCommandSource> setFieldValue = null;
+            // Setter method inside our component class, as specified by the annotation.
+            final Method setterMethod;
+            if (!optionAnnotation.setter().isEmpty()) {
+                try {
+                    setterMethod = clazz.getMethod(optionAnnotation.setter(), fieldClass);
+                } catch (NoSuchMethodException e) {
+                    throw new RuntimeException(e);
+                }
+            } else setterMethod = null;
+
+            // Getter method inside our component class, as specified by the annotation.
+            final Method getterMethod;
+            if (!optionAnnotation.getter().isEmpty()) {
+                try {
+                    getterMethod = clazz.getMethod(optionAnnotation.getter());
+                } catch (NoSuchMethodException e) {
+                    throw new RuntimeException(e);
+                }
+            } else getterMethod = null;
+
+            // Get the value of the field from the component instance via reflection. If a getter method is specified, use that instead.
+            final GetFieldValue getFieldValue = context -> {
+                try {
+                    if (getterMethod != null)
+                        return getterMethod.invoke(component.instance);
+                    else {
+                        field.setAccessible(true);
+                        return field.get(component.instance);
+                    }
+                } catch (IllegalAccessException | InvocationTargetException e) {
+                    e.printStackTrace();
+                    return null;
+                }
+            };
+
             // By default, print the value of the field when no specific option is provided.
             com.mojang.brigadier.Command<FabricClientCommandSource> noOptionProvidedFunc = (context -> {
-                try {
-                    field.setAccessible(true);
-                    DebugUtility.print(context, optionKey + "=" + field.get(component.instance));
-                    return 1;
-                } catch (IllegalAccessException e) {
-                    e.printStackTrace();
-                    return -1;
-                }
+                DebugUtility.print(context, optionKey + "=" + getFieldValue.run(component.instance));
+                return 1;
             });
 
+            ArgumentType<?> argumentType = null;
+            SuggestionProvider<FabricClientCommandSource> suggestionProvider = null;
+            final GetNewFieldValue<FabricClientCommandSource> getNewFieldValue;
+            final SetNewFieldValue<FabricClientCommandSource> setNewFieldValue;
             if (fieldClass.isEnum()) {
                 argumentType = StringArgumentType.string();
                 suggestionProvider = new SuggestionProvider<FabricClientCommandSource>() {
@@ -247,55 +281,52 @@ public class CurrInvComponentRegistry {
                     }
                 };
 
-                // If the option is an enum, we want to provide a list of options to the user
-                setFieldValue = (context) -> {
-                    try {
-                        field.setAccessible(true);
-                        field.set(component.instance, Enum.valueOf((Class<Enum>) fieldClass, ComponentUtility.convertCamelToSnake(context.getArgument(optionKey, String.class)).toUpperCase()));
-                        return 1;
-                    } catch (IllegalAccessException e) {
-                        e.printStackTrace();
-                        return -1;
-                    }
-                };
+                getNewFieldValue = context -> Enum.valueOf((Class<Enum>) fieldClass, ComponentUtility.convertCamelToSnake(context.getArgument(optionKey, String.class)).toUpperCase());
             } else if (field.getType() == boolean.class) {
                 argumentType = BoolArgumentType.bool();
 
-                setFieldValue = (context) -> {
-                    try {
-                        field.setAccessible(true);
-                        field.set(component.instance, context.getArgument(optionKey, boolean.class));
-                        return 1;
-                    } catch (IllegalAccessException e) {
-                        e.printStackTrace();
-                        return -1;
-                    }
-                };
+                getNewFieldValue = context -> context.getArgument(optionKey, boolean.class);
+            } else {
+                getNewFieldValue = null;
+            }
 
+            setNewFieldValue = (context, value) -> {
+                try {
+                    if (setterMethod != null) {
+                        setterMethod.invoke(component.instance, value);
+                    } else {
+                        field.setAccessible(true);
+                        field.set(component.instance, value);
+                    }
+                    return 1;
+                } catch (IllegalAccessException | InvocationTargetException e) {
+                    e.printStackTrace();
+                    return -1;
+                }
+            };
+
+            if (field.getType() == boolean.class) {
                 // If the option is a boolean, we want to toggle the value of the field when no specific option is provided.
                 noOptionProvidedFunc = (context -> {
-                    try {
-                        field.setAccessible(true);
-                        field.set(component.instance, !field.getBoolean(component.instance));
-                        DebugUtility.print(context, optionKey + "=" + field.get(component.instance));
-                        return 1;
-                    } catch (IllegalAccessException e) {
-                        e.printStackTrace();
-                        return -1;
-                    }
+                    setNewFieldValue.run(context, !(boolean) getFieldValue.run(component.instance));
+                    DebugUtility.print(context, optionKey + "=" + getFieldValue.run(component.instance));
+                    return 1;
                 });
             }
 
 
             LiteralArgumentBuilder<FabricClientCommandSource> subCommand = ClientCommandManager.literal(optionKey);
-            // Build the subCommand option
-            if (noOptionProvidedFunc != null)
-                subCommand = subCommand.executes(noOptionProvidedFunc);
-            if (argumentType != null && setFieldValue != null) {
+            subCommand = subCommand.executes(noOptionProvidedFunc);
+
+            if (argumentType != null && getNewFieldValue != null && setNewFieldValue != null) {
                 RequiredArgumentBuilder<FabricClientCommandSource, ?> argument = ClientCommandManager.argument(optionKey, argumentType);
                 if (suggestionProvider != null)
                     argument = argument.suggests(suggestionProvider);
-                argument.executes(setFieldValue);
+
+                argument.executes((context) -> {
+                    setNewFieldValue.run(context, getNewFieldValue.run(context));
+                    return 1;
+                });
                 subCommand.then(argument);
             }
 
