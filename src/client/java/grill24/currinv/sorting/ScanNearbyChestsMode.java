@@ -1,9 +1,6 @@
 package grill24.currinv.sorting;
 
-import net.minecraft.block.entity.BlockEntity;
-import net.minecraft.block.entity.ChestBlockEntity;
-import net.minecraft.block.entity.LootableContainerBlockEntity;
-import net.minecraft.block.entity.ShulkerBoxBlockEntity;
+import net.minecraft.block.entity.*;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.gui.screen.Screen;
 
@@ -27,8 +24,8 @@ public class ScanNearbyChestsMode implements IFullSuiteSorterMode {
                             return new ArrayList<>(containersToVisit);
                         }
                         BlockEntity blockEntity = client.world.getBlockEntity(client.player.getBlockPos().add(x, y, z));
-                        if (blockEntity instanceof ChestBlockEntity || blockEntity instanceof ShulkerBoxBlockEntity) {
-                            LootableContainerBlockEntity lootableContainerBlockEntity = ((LootableContainerBlockEntity) blockEntity);
+                        if (blockEntity instanceof ChestBlockEntity || blockEntity instanceof ShulkerBoxBlockEntity || blockEntity instanceof BarrelBlockEntity) {
+                            LootableContainerBlockEntity lootableContainerBlockEntity = (LootableContainerBlockEntity) blockEntity;
                             if (!containersToVisit.contains(lootableContainerBlockEntity))
                                 containersToVisit.add(SortingUtility.getOneBlockEntityFromDoubleChests(client, lootableContainerBlockEntity));
                         }

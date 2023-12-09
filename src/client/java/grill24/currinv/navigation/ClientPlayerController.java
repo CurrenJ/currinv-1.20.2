@@ -28,12 +28,6 @@ public abstract class ClientPlayerController implements IClientPlayerController 
     @Override
     public abstract Vector2d getPitchAndYaw(Vector2d pitchAndYaw, ClientPlayerEntity player);
 
-    protected float angleLerp(float a, float b, float t) {
-        float normalizedA = NavigationUtility.normalizeAngle(a);
-        float normalizedB = NavigationUtility.normalizeAngle(b);
-        return NavigationUtility.normalizeAngle(normalizedA + (NavigationUtility.normalizeAngle(normalizedB - normalizedA) * t));
-    }
-
     public boolean isMovementKeyPressed(GameOptions settings) {
         return settings.forwardKey.isPressed()
                 || settings.backKey.isPressed()

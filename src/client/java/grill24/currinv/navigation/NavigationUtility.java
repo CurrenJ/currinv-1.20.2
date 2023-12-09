@@ -1,7 +1,10 @@
 package grill24.currinv.navigation;
 
+import grill24.currinv.debug.DebugUtility;
 import net.minecraft.block.*;
+import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.network.ClientPlayerEntity;
+import net.minecraft.client.network.ClientPlayerInteractionManager;
 import net.minecraft.client.world.ClientWorld;
 import net.minecraft.entity.ai.pathing.NavigationType;
 import net.minecraft.registry.tag.BlockTags;
@@ -14,6 +17,7 @@ import org.joml.Vector2d;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Objects;
 
 public class NavigationUtility {
     public static boolean canPlayerStandOnBlockBelow(ClientWorld world, ClientPlayerEntity player, BlockPos pos) {
@@ -57,6 +61,57 @@ public class NavigationUtility {
         return false;
     }
 
+    public static List<Direction> getRelativeDirections(BlockPos from, BlockPos to) {
+        List<Direction> directions = new ArrayList<>();
+        Vec3i vi = to.subtract(from);
+        directions.add(Direction.fromVector(vi.getX(), 0, 0));
+        directions.add(Direction.fromVector(0, vi.getY(), 0));
+        directions.add(Direction.fromVector(0, 0, vi.getZ()));
+        return directions.stream().filter(Objects::nonNull).toList();
+    }
+
+    public static boolean canPlayerSeeBlockPosFromBlockPos(ClientPlayerInteractionManager interactionManager, ClientWorld world, ClientPlayerEntity player, BlockPos from, BlockPos see) {
+        // Check if the see blockPos is blocked by any of the three blocks facing hte from pos that are immediately adjacent to it.
+        // This eases the burden on the raycast. If the player is looking at a blockPos that is blocked by the three blocks immediately adjacent to it, the player cannot see the blockPos.
+        List<Direction> directions = getRelativeDirections(see, from);
+        if(directions.size() == 3) {
+            boolean blockedByImmediatelyAdjacentBlocks = true;
+            for (Direction direction : directions) {
+                if (world.isAir(see.offset(direction))) {
+                    blockedByImmediatelyAdjacentBlocks = false;
+                }
+            }
+            if (blockedByImmediatelyAdjacentBlocks)
+                return false;
+        }
+
+
+        // Check if there are any blocks between player and blockPos that would block the player's line of sight.
+        Vec3d fromVec = from.toCenterPos().subtract(0, 0.5, 0).add(0, player.getEyeHeight(player.getPose()), 0);
+        Vec3d seeVec = getBlockFaceToLookTowards(world, from.toCenterPos(), see.toCenterPos());
+
+        // Get the vector from the player to the blockPos.
+        Vec3d rayVec = seeVec.subtract(fromVec);
+        double reachDistance = interactionManager.getReachDistance();
+
+        //Iterate through each block along the vector from the player to the blockPos.
+        double stepSize = 0.05;
+        for (double i = 0; i < reachDistance + stepSize; i += stepSize) {
+            Vec3d blockPosAlongVector = fromVec.add(rayVec.normalize().multiply(i));
+            BlockPos blockPosAlongVectorBlockPos = new BlockPos((int) Math.floor(blockPosAlongVector.getX()), (int) Math.floor(blockPosAlongVector.getY()), (int) Math.floor(blockPosAlongVector.getZ()));
+
+            if(blockPosAlongVectorBlockPos.equals(see)) {
+                return true;
+            }
+
+            // If the blockPos along the vector is not air, the player cannot see the blockPos.
+            if (!world.getBlockState(blockPosAlongVectorBlockPos).isAir()) {
+                return false;
+            }
+        }
+        return false;
+    }
+
     public static boolean hasSpaceForPlayerToStandAtBlockPos(ClientWorld world, ClientPlayerEntity player, BlockPos blockPos) {
         return (canPathfindThrough(world, blockPos) || world.getBlockState(blockPos).getBlock() instanceof CarpetBlock) && canPathfindThrough(world, blockPos.up());
     }
@@ -91,20 +146,11 @@ public class NavigationUtility {
         return cardinals;
     }
 
-    public static Vector2d getPitchAndYawToLookTowardsBlockFace(ClientPlayerEntity player, BlockPos pos) {
+    public static Vector2d getPitchAndYawToLookTowardsBlockFace(ClientWorld world, ClientPlayerEntity player, BlockPos pos) {
         Vec3d playerBodyPos = player.getPos();
         Vec3d playerHeadPos = new Vec3d(playerBodyPos.x, player.getEyeY(), playerBodyPos.z);
 
-        Vec3d target = pos.toCenterPos();
-        Vec3i vi = pos.subtract(player.getBlockPos());
-        Direction dirFacingPos = Direction.fromVector(vi.getX(), 0, vi.getZ());
-        if (dirFacingPos != null)
-            target = target.offset(dirFacingPos.getOpposite(), 0.5 - 1 / 16.0);
-        else {
-            System.out.println("Direction is null!");
-            System.out.println("Player: " + player.getBlockX() + ", " + player.getBlockY() + ", " + player.getBlockZ());
-            System.out.println("Block: " + pos.getX() + ", " + pos.getY() + ", " + pos.getZ());
-        }
+        Vec3d target = getBlockFaceToLookTowards(world, player, pos);
 
         Vec3d v = new Vec3d(target.getX() - playerHeadPos.getX(), target.getY() - playerHeadPos.getY(), target.getZ() - playerHeadPos.getZ());
         double yaw = (float) (Math.toDegrees(Math.atan2(v.getZ(), v.getX())) - 90.0f);
@@ -114,11 +160,64 @@ public class NavigationUtility {
         return new Vector2d(normalizeAngle(pitch), normalizeAngle(yaw));
     }
 
+    public static Vec3d getBlockFaceToLookTowards(ClientWorld world, ClientPlayerEntity player, BlockPos to) {
+        return getBlockFaceToLookTowards(world, player.getEyePos(), to.toCenterPos());
+    }
+
+    public static Vec3d getBlockFaceToLookTowards(ClientWorld world, Vec3d from, Vec3d to)
+    {
+        Vec3d target = to;
+        Vec3d vi = target.subtract(from);
+        Direction dirFacingPos;
+
+        BlockPos fromBlockPos = new BlockPos((int) Math.floor(from.getX()), (int) Math.floor(from.getY()), (int) Math.floor(from.getZ()));
+        BlockPos toBlockPos = new BlockPos((int) Math.floor(to.getX()), (int) Math.floor(to.getY()), (int) Math.floor(to.getZ()));
+
+        // Only want up or down if directly above or below block!
+        if(fromBlockPos.getX() == toBlockPos.getX() && fromBlockPos.getZ() == toBlockPos.getZ()) {
+            dirFacingPos = from.getY() < to.getY() ? Direction.UP : Direction.DOWN;
+        }
+        else {
+            // If the player is not directly above or below the block, we want to look towards the block face that is closest to the player (and is not blocked by a block).
+            Direction dirFacingX = Direction.fromVector((int) Math.ceil(vi.getX()), 0, 0);
+            boolean isXFaceAir = dirFacingX != null && world.isAir(toBlockPos.offset(dirFacingX.getOpposite()));
+
+            Direction dirFacingZ = Direction.fromVector(0, 0, (int) Math.ceil(vi.getZ()));
+            boolean isZFaceAir = dirFacingZ != null && world.isAir(toBlockPos.offset(dirFacingZ.getOpposite()));
+
+            Direction dirFacingY = Direction.fromVector(0, (int) Math.ceil(vi.getY()), 0);
+            boolean isYFaceAir = dirFacingY != null && world.isAir(toBlockPos.offset(dirFacingY.getOpposite()));
+
+            // If both faces are air, we want to look towards the face that is closest to the player.
+            if(isXFaceAir && isZFaceAir)
+                dirFacingPos = vi.getX() > vi.getZ() ? dirFacingX : dirFacingZ;
+            else if(isXFaceAir)
+                dirFacingPos = dirFacingX;
+            else if(isZFaceAir)
+                dirFacingPos = dirFacingZ;
+            else if(isYFaceAir)
+                dirFacingPos = dirFacingY;
+            else
+                dirFacingPos = null;
+        }
+
+        if (dirFacingPos != null)
+            target = target.offset(dirFacingPos.getOpposite(), 0.5 - 1 / 16.0);
+
+        return target;
+    }
+
     protected static float normalizeAngle(float yaw) {
         return (yaw + 180) % 360 - 180;
     }
 
     protected static double normalizeAngle(double yaw) {
         return (yaw + 180) % 360 - 180;
+    }
+
+    public static float angleLerp(float a, float b, float t) {
+        float normalizedA = NavigationUtility.normalizeAngle(a);
+        float normalizedB = NavigationUtility.normalizeAngle(b);
+        return NavigationUtility.normalizeAngle(normalizedA + (NavigationUtility.normalizeAngle(normalizedB - normalizedA) * t));
     }
 }

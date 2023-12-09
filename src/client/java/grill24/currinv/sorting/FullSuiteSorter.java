@@ -13,6 +13,7 @@ import net.minecraft.block.entity.LootableContainerBlockEntity;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.gui.screen.Screen;
 import net.minecraft.client.network.ClientPlayerEntity;
+import net.minecraft.client.network.ClientPlayerInteractionManager;
 import net.minecraft.client.world.ClientWorld;
 import net.minecraft.command.argument.ItemStackArgumentType;
 import net.minecraft.entity.decoration.ItemFrameEntity;
@@ -25,9 +26,7 @@ import net.minecraft.util.hit.EntityHitResult;
 import net.minecraft.util.math.BlockPos;
 import org.joml.Vector2d;
 
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.List;
+import java.util.*;
 import java.util.stream.IntStream;
 
 @Command
@@ -52,8 +51,11 @@ public class FullSuiteSorter {
     private State state;
 
     private State lastState;
+    private Queue<BlockPos> placesToStand;
     private BlockPos placeToStand;
     public ContainerStockData allContainersStockData;
+
+    public float lookRadius;
 
     private IFullSuiteSorterMode mode;
 
@@ -197,16 +199,20 @@ public class FullSuiteSorter {
         LootableContainerBlockEntity container = containersToVisit.get(containerIndex);
         if (container != null) {
             if (!CurrInvClient.navigator.isNavigating() && !CurrInvClient.navigator.isSearchingForPath()) {
-                placeToStand = getPlaceToStandByContainer(client.world, client.player, container.getPos());
-                if (placeToStand != null) {
+                if(placesToStand == null)
+                    placesToStand = getPlacesToStandByContainer(client.interactionManager, client.world, client.player, container.getPos());
+
+                if (!placesToStand.isEmpty()) {
+                    placeToStand = placesToStand.poll();
                     CurrInvClient.navigator.startNavigationToPosition(client.player.getBlockPos(), placeToStand, false, 3000);
                     state = State.WAIT_TO_ARRIVE_AT_CONTAINER;
                 } else {
                     if (client.world != null) {
-
+                        // If we fail on this half of the chest - flip to the other half and try again
                         BlockPos containerPos = container.getPos();
                         BlockPos containerOtherHalfPos = SortingUtility.getOneBlockPosFromDoubleChests(client, containerPos, DoubleBlockProperties.Type.SECOND);
                         if (containerPos != containerOtherHalfPos) {
+                            DebugUtility.print(client, "State: §cFailed to find open space adjacent to container. Trying to navigate to other half of double chest. " + containersToVisit.get(containerIndex).getPos());
                             containersToVisit.set(containerIndex, (LootableContainerBlockEntity) client.world.getBlockEntity(containerOtherHalfPos));
                             return;
                         }
@@ -221,13 +227,20 @@ public class FullSuiteSorter {
     private void waitForNavigationToContainer(MinecraftClient client) {
         if (!CurrInvClient.navigator.isNavigating() && !CurrInvClient.navigator.isSearchingForPath()) {
             if (client.player != null && client.player.getBlockPos().equals(placeToStand)) {
+                placesToStand = null;
+                lookRadius = 0;
                 state = State.LOOK_AT_CONTAINER;
+            } else if(!placesToStand.isEmpty()) {
+                // If we're not at the place to stand, but there are still places to stand, go to the next place to stand.
+                state = State.BEGIN_NAVIGATE_TO_CONTAINER;
             } else {
+                placesToStand = null;
                 if (client.world != null) {
 
                     BlockPos containerPos = containersToVisit.get(containerIndex).getPos();
                     BlockPos containerOtherHalfPos = SortingUtility.getOneBlockPosFromDoubleChests(client, containerPos, DoubleBlockProperties.Type.SECOND);
                     if (containerPos != containerOtherHalfPos) {
+                        DebugUtility.print(client, "State: §cFailed to find path to container. Trying to navigate to other half of double chest. " + containersToVisit.get(containerIndex).getPos());
                         containersToVisit.set(containerIndex, (LootableContainerBlockEntity) client.world.getBlockEntity(containerOtherHalfPos));
                         state = State.BEGIN_NAVIGATE_TO_CONTAINER;
                         return;
@@ -242,10 +255,23 @@ public class FullSuiteSorter {
 
     private void lookAtContainer(MinecraftClient client) {
         LootableContainerBlockEntity container = containersToVisit.get(containerIndex);
+
+        final long millisPerRotation = 2000;
+        float dt = (System.currentTimeMillis() % (millisPerRotation) / ((float)millisPerRotation));
+        double angle = 2 * Math.PI * dt;
+        lookRadius += dt * 0.25f;
+
         if (client.player != null && container != null) {
-            Vector2d pitchAndYaw = NavigationUtility.getPitchAndYawToLookTowardsBlockFace(client.player, container.getPos());
-            client.player.setYaw((float) pitchAndYaw.y);
-            client.player.setPitch((float) pitchAndYaw.x);
+            float lerpFactor = 0.8f;
+
+            Vector2d pitchAndYaw = NavigationUtility.getPitchAndYawToLookTowardsBlockFace(client.world, client.player, container.getPos());
+            float yaw = (float) pitchAndYaw.y;
+            yaw += (float) (Math.sin(angle) * lookRadius);
+            client.player.setYaw(NavigationUtility.angleLerp(client.player.getYaw(), yaw, lerpFactor));
+
+            float pitch = (float) pitchAndYaw.x;
+            pitch += (float) (Math.cos(angle) * lookRadius);
+            client.player.setPitch(NavigationUtility.angleLerp(client.player.getPitch(), pitch, lerpFactor));
 
             if (client.crosshairTarget instanceof EntityHitResult entityHitResult && entityHitResult.getEntity() instanceof ItemFrameEntity itemFrameEntity) {
                 // copied from AbstractDecorationEntity#canStayAttached
@@ -253,12 +279,16 @@ public class FullSuiteSorter {
                 client.crosshairTarget = new BlockHitResult(client.crosshairTarget.getPos(), itemFrameEntity.getHorizontalFacing(), attachedPos, false);
             }
             if (client.crosshairTarget instanceof BlockHitResult blockHitResult && blockHitResult.getBlockPos().equals(container.getPos())) {
+                // Unlike other states, we don't wait for the next tick to open the container. We do it immediately. This is because we want to open the container as soon as we look at it.
+                // TODO: Merge these two states.
                 state = State.OPEN_CONTAINER;
+                openContainer(client);
             }
         } else {
             state = State.NEXT_CONTAINER;
         }
     }
+
 
     private void openContainer(MinecraftClient client) {
         assert client.interactionManager != null;
@@ -324,7 +354,7 @@ public class FullSuiteSorter {
         closeOpenContainer(client);
         if (client.currentScreen == null) {
             containerIndex++;
-            placeToStand = null;
+            placesToStand = null;
             if (containerIndex >= containersToVisit.size()) {
                 state = State.FINISH;
             } else {
@@ -386,10 +416,6 @@ public class FullSuiteSorter {
                     DebugUtility.print(client, "State: §cFailed to find open space adjacent to container. Moving on to next container. " + containersToVisit.get(containerIndex).getPos());
                 } else if (state == State.NEXT_CONTAINER && lastState == State.WAIT_TO_ARRIVE_AT_CONTAINER) {
                     DebugUtility.print(client, "State: §cFailed to find path to container. Moving on to next container. " + containersToVisit.get(containerIndex).getPos());
-                } else if (state == State.BEGIN_NAVIGATE_TO_CONTAINER && lastState == State.WAIT_TO_ARRIVE_AT_CONTAINER) {
-                    DebugUtility.print(client, "State: §cFailed to find path to container. Trying to navigate to other half of double chest. " + containersToVisit.get(containerIndex).getPos());
-                } else if (state == State.BEGIN_NAVIGATE_TO_CONTAINER && lastState != State.BEGIN_NAVIGATE_TO_CONTAINER) {
-                    DebugUtility.print(client, "State: §cFailed to find open space adjacent to container. Trying to navigate to other half of double chest. " + containersToVisit.get(containerIndex).getPos());
                 } else if (state == State.NEXT_CONTAINER && lastState != State.CLOSE_CONTAINER) {
                     DebugUtility.print(client, "State: §cFailed in state " + lastState.name() + ". Moving on to next container. " + containersToVisit.get(containerIndex).getPos());
                 } else if (state == State.NEXT_CONTAINER) {
@@ -401,23 +427,49 @@ public class FullSuiteSorter {
         }
     }
 
-    private static BlockPos getPlaceToStandByContainer(ClientWorld world, ClientPlayerEntity player, BlockPos containerPos) {
-        BlockPos closest = null;
-        int closestDistToPlayer = Integer.MAX_VALUE;
-        for (BlockPos adjacent : NavigationUtility.getCardinals(containerPos)) {
-            for (int dy = 0; dy >= -2; dy--) {
-                BlockPos blockPos = adjacent.up(dy);
-                if (canAccessContainerFromBlockPos(world, player, containerPos, blockPos) && player.getBlockPos().getManhattanDistance(blockPos) < closestDistToPlayer) {
-                    closest = blockPos;
-                    closestDistToPlayer = player.getBlockPos().getManhattanDistance(blockPos);
+    private static Queue<BlockPos> getPlacesToStandByContainer(ClientPlayerInteractionManager interactionManager, ClientWorld world, ClientPlayerEntity player, BlockPos containerPos) {
+        // TODO: Massively duplicated and redundant code from nav to marker - but it works and I'm too lazy to make it better. Could make a function that takes a functional interface that takes in a blockPos.
+
+        Queue<BlockPos> eligible = new LinkedList<>();
+
+        final int MAX_DIAMETER = (int) Math.ceil(interactionManager.getReachDistance() * 2);
+        for (int cubeSideLength = 3; cubeSideLength <= MAX_DIAMETER; cubeSideLength += 2) {
+            // Each iteration of this outerloop is O(n^2) where n is cubeSideLength. It's better than the other solutions.
+
+            // Shift cube to center it
+            int offset = -Math.floorDiv(cubeSideLength, 2);
+
+            // Iterate through the faces of the cube
+            for (int x = offset; x < cubeSideLength + offset; x += cubeSideLength - 1) {
+                for (int y = offset; y < cubeSideLength + offset; y++) {
+                    for (int z = offset; z < cubeSideLength + offset; z++) {
+                        BlockPos blockPos1 = containerPos.add(x, y, z);
+                        if (canAccessContainerFromBlockPos(interactionManager, world, player, containerPos, blockPos1)) {
+                            eligible.add(blockPos1);
+                        }
+
+                        BlockPos blockPos2 = containerPos.add(y, x, z);
+                        if (canAccessContainerFromBlockPos(interactionManager, world, player, containerPos, blockPos2)) {
+                            eligible.add(blockPos2);
+                        }
+
+                        BlockPos blockPos3 = containerPos.add(y, z, x);
+                        if (canAccessContainerFromBlockPos(interactionManager, world, player, containerPos, blockPos3)) {
+                            eligible.add(blockPos3);
+                        }
+                    }
                 }
             }
         }
-        return closest;
+        return eligible;
     }
 
-    private static boolean canAccessContainerFromBlockPos(ClientWorld world, ClientPlayerEntity player, BlockPos containerPos, BlockPos blockPos) {
-        return NavigationUtility.canPlayerStandOnBlockBelow(world, player, blockPos) && NavigationUtility.hasSpaceForPlayerToStandAtBlockPos(world, player, blockPos);
+    private static boolean canAccessContainerFromBlockPos(ClientPlayerInteractionManager interactionManager, ClientWorld world, ClientPlayerEntity player, BlockPos containerPos, BlockPos blockPos) {
+        // Returns true if there is a clear line of sight between player and container, and the player can stand at blockPos.
+        boolean canSee = NavigationUtility.canPlayerSeeBlockPosFromBlockPos(interactionManager, world, player, blockPos, containerPos);
+        boolean canStand = NavigationUtility.hasSpaceForPlayerToStandAtBlockPos(world, player, blockPos);
+        boolean canStandOnBlockBelow = NavigationUtility.canPlayerStandOnBlockBelow(world, player, blockPos);
+        return  canStandOnBlockBelow && canStand && canSee;
     }
 
     // ---- Debug ----

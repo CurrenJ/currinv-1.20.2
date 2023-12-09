@@ -138,8 +138,8 @@ public class LookAndAdvanceClientPlayerController extends ClientPlayerController
         if (CurrInvClient.navigator.isNavigating()) {
             float lerpFactor = 0.1f;
 
-            float yaw = angleLerp(player.getYaw(), (float) desiredPitchAndYaw.y, lerpFactor);
-            float pitch = angleLerp(player.getPitch(), (float) desiredPitchAndYaw.x, lerpFactor);
+            float yaw = NavigationUtility.angleLerp(player.getYaw(), (float) desiredPitchAndYaw.y, lerpFactor);
+            float pitch = NavigationUtility.angleLerp(player.getPitch(), (float) desiredPitchAndYaw.x, lerpFactor);
 
             return new Vector2d(pitch, yaw);
         } else {
