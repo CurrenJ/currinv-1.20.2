@@ -1,8 +1,6 @@
 package grill24.currinv.navigation;
 
-import grill24.currinv.debug.DebugUtility;
 import net.minecraft.block.*;
-import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.network.ClientPlayerEntity;
 import net.minecraft.client.network.ClientPlayerInteractionManager;
 import net.minecraft.client.world.ClientWorld;
@@ -74,7 +72,7 @@ public class NavigationUtility {
         // Check if the see blockPos is blocked by any of the three blocks facing hte from pos that are immediately adjacent to it.
         // This eases the burden on the raycast. If the player is looking at a blockPos that is blocked by the three blocks immediately adjacent to it, the player cannot see the blockPos.
         List<Direction> directions = getRelativeDirections(see, from);
-        if(directions.size() == 3) {
+        if (directions.size() == 3) {
             boolean blockedByImmediatelyAdjacentBlocks = true;
             for (Direction direction : directions) {
                 if (world.isAir(see.offset(direction))) {
@@ -100,7 +98,7 @@ public class NavigationUtility {
             Vec3d blockPosAlongVector = fromVec.add(rayVec.normalize().multiply(i));
             BlockPos blockPosAlongVectorBlockPos = new BlockPos((int) Math.floor(blockPosAlongVector.getX()), (int) Math.floor(blockPosAlongVector.getY()), (int) Math.floor(blockPosAlongVector.getZ()));
 
-            if(blockPosAlongVectorBlockPos.equals(see)) {
+            if (blockPosAlongVectorBlockPos.equals(see)) {
                 return true;
             }
 
@@ -164,8 +162,7 @@ public class NavigationUtility {
         return getBlockFaceToLookTowards(world, player.getEyePos(), to.toCenterPos());
     }
 
-    public static Vec3d getBlockFaceToLookTowards(ClientWorld world, Vec3d from, Vec3d to)
-    {
+    public static Vec3d getBlockFaceToLookTowards(ClientWorld world, Vec3d from, Vec3d to) {
         Vec3d target = to;
         Vec3d vi = target.subtract(from);
         Direction dirFacingPos;
@@ -174,10 +171,9 @@ public class NavigationUtility {
         BlockPos toBlockPos = new BlockPos((int) Math.floor(to.getX()), (int) Math.floor(to.getY()), (int) Math.floor(to.getZ()));
 
         // Only want up or down if directly above or below block!
-        if(fromBlockPos.getX() == toBlockPos.getX() && fromBlockPos.getZ() == toBlockPos.getZ()) {
+        if (fromBlockPos.getX() == toBlockPos.getX() && fromBlockPos.getZ() == toBlockPos.getZ()) {
             dirFacingPos = from.getY() < to.getY() ? Direction.UP : Direction.DOWN;
-        }
-        else {
+        } else {
             // If the player is not directly above or below the block, we want to look towards the block face that is closest to the player (and is not blocked by a block).
             Direction dirFacingX = Direction.fromVector((int) Math.ceil(vi.getX()), 0, 0);
             boolean isXFaceAir = dirFacingX != null && world.isAir(toBlockPos.offset(dirFacingX.getOpposite()));
@@ -189,13 +185,13 @@ public class NavigationUtility {
             boolean isYFaceAir = dirFacingY != null && world.isAir(toBlockPos.offset(dirFacingY.getOpposite()));
 
             // If both faces are air, we want to look towards the face that is closest to the player.
-            if(isXFaceAir && isZFaceAir)
+            if (isXFaceAir && isZFaceAir)
                 dirFacingPos = vi.getX() > vi.getZ() ? dirFacingX : dirFacingZ;
-            else if(isXFaceAir)
+            else if (isXFaceAir)
                 dirFacingPos = dirFacingX;
-            else if(isZFaceAir)
+            else if (isZFaceAir)
                 dirFacingPos = dirFacingZ;
-            else if(isYFaceAir)
+            else if (isYFaceAir)
                 dirFacingPos = dirFacingY;
             else
                 dirFacingPos = null;

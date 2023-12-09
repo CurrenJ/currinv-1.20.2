@@ -199,7 +199,7 @@ public class FullSuiteSorter {
         LootableContainerBlockEntity container = containersToVisit.get(containerIndex);
         if (container != null) {
             if (!CurrInvClient.navigator.isNavigating() && !CurrInvClient.navigator.isSearchingForPath()) {
-                if(placesToStand == null)
+                if (placesToStand == null)
                     placesToStand = getPlacesToStandByContainer(client.interactionManager, client.world, client.player, container.getPos());
 
                 if (!placesToStand.isEmpty()) {
@@ -230,7 +230,7 @@ public class FullSuiteSorter {
                 placesToStand = null;
                 lookRadius = 0;
                 state = State.LOOK_AT_CONTAINER;
-            } else if(!placesToStand.isEmpty()) {
+            } else if (!placesToStand.isEmpty()) {
                 // If we're not at the place to stand, but there are still places to stand, go to the next place to stand.
                 state = State.BEGIN_NAVIGATE_TO_CONTAINER;
             } else {
@@ -257,7 +257,7 @@ public class FullSuiteSorter {
         LootableContainerBlockEntity container = containersToVisit.get(containerIndex);
 
         final long millisPerRotation = 2000;
-        float dt = (System.currentTimeMillis() % (millisPerRotation) / ((float)millisPerRotation));
+        float dt = (System.currentTimeMillis() % (millisPerRotation) / ((float) millisPerRotation));
         double angle = 2 * Math.PI * dt;
         lookRadius += dt * 0.25f;
 
@@ -469,7 +469,7 @@ public class FullSuiteSorter {
         boolean canSee = NavigationUtility.canPlayerSeeBlockPosFromBlockPos(interactionManager, world, player, blockPos, containerPos);
         boolean canStand = NavigationUtility.hasSpaceForPlayerToStandAtBlockPos(world, player, blockPos);
         boolean canStandOnBlockBelow = NavigationUtility.canPlayerStandOnBlockBelow(world, player, blockPos);
-        return  canStandOnBlockBelow && canStand && canSee;
+        return canStandOnBlockBelow && canStand && canSee;
     }
 
     // ---- Debug ----
