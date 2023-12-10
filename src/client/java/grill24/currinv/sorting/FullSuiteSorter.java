@@ -7,9 +7,11 @@ import grill24.currinv.debug.DebugParticles;
 import grill24.currinv.debug.DebugUtility;
 import grill24.currinv.navigation.NavigationUtility;
 import net.fabricmc.fabric.api.client.command.v2.FabricClientCommandSource;
-import net.minecraft.block.DoubleBlockProperties;
+import net.minecraft.block.*;
 import net.minecraft.block.entity.BlockEntity;
+import net.minecraft.block.entity.LockableContainerBlockEntity;
 import net.minecraft.block.entity.LootableContainerBlockEntity;
+import net.minecraft.block.entity.SignBlockEntity;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.gui.screen.Screen;
 import net.minecraft.client.network.ClientPlayerEntity;
@@ -23,6 +25,7 @@ import net.minecraft.util.ActionResult;
 import net.minecraft.util.Hand;
 import net.minecraft.util.hit.BlockHitResult;
 import net.minecraft.util.hit.EntityHitResult;
+import net.minecraft.util.hit.HitResult;
 import net.minecraft.util.math.BlockPos;
 import org.joml.Vector2d;
 
@@ -31,8 +34,8 @@ import java.util.stream.IntStream;
 
 @Command
 public class FullSuiteSorter {
-    private List<LootableContainerBlockEntity> containersToVisit;
-    private int containerIndex;
+    public List<LootableContainerBlockEntity> containersToVisit;
+    public int containerIndex;
 
     private enum State {
         IDLE,
@@ -178,6 +181,7 @@ public class FullSuiteSorter {
 
         containerIndex = 0;
         state = State.BEGIN_NAVIGATE_TO_CONTAINER;
+        placesToStand = null;
 
         // Update our stock reference from the sorter data.
         setAllContainersStockData(CurrInvClient.sorter);
@@ -195,6 +199,8 @@ public class FullSuiteSorter {
             state = State.FINISH;
             return;
         }
+
+        // BlockPos{x=1848, y=71, z=1399}
 
         LootableContainerBlockEntity container = containersToVisit.get(containerIndex);
         if (container != null) {
@@ -218,6 +224,7 @@ public class FullSuiteSorter {
                         }
                     }
 
+                    mode.onContainerAccessFail(client, containersToVisit);
                     state = State.NEXT_CONTAINER;
                 }
             }
@@ -248,6 +255,7 @@ public class FullSuiteSorter {
 
                 }
 
+                mode.onContainerAccessFail(client, containersToVisit);
                 state = State.NEXT_CONTAINER;
             }
         }
@@ -273,20 +281,50 @@ public class FullSuiteSorter {
             pitch += (float) (Math.cos(angle) * lookRadius);
             client.player.setPitch(NavigationUtility.angleLerp(client.player.getPitch(), pitch, lerpFactor));
 
+
             if (client.crosshairTarget instanceof EntityHitResult entityHitResult && entityHitResult.getEntity() instanceof ItemFrameEntity itemFrameEntity) {
                 // copied from AbstractDecorationEntity#canStayAttached
                 BlockPos attachedPos = itemFrameEntity.getDecorationBlockPos().offset(itemFrameEntity.getHorizontalFacing().getOpposite());
                 client.crosshairTarget = new BlockHitResult(client.crosshairTarget.getPos(), itemFrameEntity.getHorizontalFacing(), attachedPos, false);
             }
-            if (client.crosshairTarget instanceof BlockHitResult blockHitResult && blockHitResult.getBlockPos().equals(container.getPos())) {
-                // Unlike other states, we don't wait for the next tick to open the container. We do it immediately. This is because we want to open the container as soon as we look at it.
-                // TODO: Merge these two states.
-                state = State.OPEN_CONTAINER;
-                openContainer(client);
+            else if (client.crosshairTarget.getType() == HitResult.Type.BLOCK) {
+                BlockPos blockPos = ((BlockHitResult) client.crosshairTarget).getBlockPos();
+                BlockState blockState = client.world.getBlockState(blockPos);
+                Block block = blockState.getBlock();
+                if (blockPos.equals(container.getPos())) {
+                    state = State.OPEN_CONTAINER;
+                    openContainer(client);
+                    return;
+                }
+
+                // TODO: Duplicated code from openContainer - refactor
+                if (block instanceof WallSignBlock) {
+                    WallSignBlock sign = (WallSignBlock) block;
+                    BlockPos attachedPos = blockPos.offset(blockState.get(sign.FACING).getOpposite());
+                    if (!isClickableBlockAt(client, attachedPos)) {
+                        return;
+                    }
+                    BlockEntity entity = client.world.getBlockEntity(blockPos);
+                    if (!(entity instanceof SignBlockEntity)) {
+                        return;
+                    }
+
+                    // Click through sign
+                    if(attachedPos.equals(container.getPos())) {
+                        client.crosshairTarget = new BlockHitResult(client.crosshairTarget.getPos(), blockState.get(WallSignBlock.FACING), attachedPos, false);
+                        state = State.OPEN_CONTAINER;
+                        openContainer(client);
+                    }
+                }
             }
         } else {
             state = State.NEXT_CONTAINER;
         }
+    }
+
+    private boolean isClickableBlockAt(MinecraftClient client, BlockPos pos) {
+        BlockEntity entity = client.world.getBlockEntity(pos);
+        return (entity != null && entity instanceof LockableContainerBlockEntity);
     }
 
 
@@ -301,13 +339,30 @@ public class FullSuiteSorter {
                 // copied from AbstractDecorationEntity#canStayAttached
                 BlockPos attachedPos = itemFrameEntity.getDecorationBlockPos().offset(itemFrameEntity.getHorizontalFacing().getOpposite());
                 client.crosshairTarget = new BlockHitResult(client.crosshairTarget.getPos(), itemFrameEntity.getHorizontalFacing(), attachedPos, false);
+            } else if (client.crosshairTarget.getType() == HitResult.Type.BLOCK) {
+                BlockPos blockPos = ((BlockHitResult) client.crosshairTarget).getBlockPos();
+                BlockState state = client.world.getBlockState(blockPos);
+                Block block = state.getBlock();
+                if (block instanceof WallSignBlock) {
+                    WallSignBlock sign = (WallSignBlock) block;
+                    BlockPos attachedPos = blockPos.offset(state.get(sign.FACING).getOpposite());
+                    if (!isClickableBlockAt(client, attachedPos)) {
+                        return;
+                    }
+                    BlockEntity entity = client.world.getBlockEntity(blockPos);
+                    if (!(entity instanceof SignBlockEntity)) {
+                        return;
+                    }
+
+                    client.crosshairTarget = new BlockHitResult(client.crosshairTarget.getPos(), state.get(WallSignBlock.FACING), attachedPos, false);
+                }
             }
 
             if (client.crosshairTarget instanceof BlockHitResult blockHitResult) {
                 ActionResult actionResult = client.interactionManager.interactBlock(client.player, Hand.MAIN_HAND, blockHitResult);
                 if (blockHitResult.getBlockPos().equals(container.getPos())) {
                     if (actionResult == ActionResult.SUCCESS) {
-                        // TODO Fail to open blocked chests gets us stuck in the netxt state. Need to handle this.
+                        // TODO Fail to open blocked chests gets us stuck in the netxt blockState. Need to handle this.
                         state = State.WAIT_FOR_CONTAINER_SCREEN;
                         return;
                     } else {
@@ -417,7 +472,7 @@ public class FullSuiteSorter {
                 } else if (state == State.NEXT_CONTAINER && lastState == State.WAIT_TO_ARRIVE_AT_CONTAINER) {
                     DebugUtility.print(client, "State: §cFailed to find path to container. Moving on to next container. " + containersToVisit.get(containerIndex).getPos());
                 } else if (state == State.NEXT_CONTAINER && lastState != State.CLOSE_CONTAINER) {
-                    DebugUtility.print(client, "State: §cFailed in state " + lastState.name() + ". Moving on to next container. " + containersToVisit.get(containerIndex).getPos());
+                    DebugUtility.print(client, "State: §cFailed in blockState " + lastState.name() + ". Moving on to next container. " + containersToVisit.get(containerIndex).getPos());
                 } else if (state == State.NEXT_CONTAINER) {
                     DebugUtility.print(client, "State: §aSuccessfully closed container. Moving on to next container.");
                 } else if (state == State.FINISH) {
@@ -439,27 +494,30 @@ public class FullSuiteSorter {
             // Shift cube to center it
             int offset = -Math.floorDiv(cubeSideLength, 2);
 
+            TreeMap<Integer, BlockPos> orderedPos = new TreeMap<>();
             // Iterate through the faces of the cube
             for (int x = offset; x < cubeSideLength + offset; x += cubeSideLength - 1) {
                 for (int y = offset; y < cubeSideLength + offset; y++) {
                     for (int z = offset; z < cubeSideLength + offset; z++) {
                         BlockPos blockPos1 = containerPos.add(x, y, z);
+                        int manhattanDistance = Math.abs(x) + Math.abs(y) + Math.abs(z);
                         if (canAccessContainerFromBlockPos(interactionManager, world, player, containerPos, blockPos1)) {
-                            eligible.add(blockPos1);
+                            orderedPos.put(manhattanDistance, blockPos1);
                         }
 
                         BlockPos blockPos2 = containerPos.add(y, x, z);
                         if (canAccessContainerFromBlockPos(interactionManager, world, player, containerPos, blockPos2)) {
-                            eligible.add(blockPos2);
+                            orderedPos.put(manhattanDistance, blockPos2);
                         }
 
                         BlockPos blockPos3 = containerPos.add(y, z, x);
                         if (canAccessContainerFromBlockPos(interactionManager, world, player, containerPos, blockPos3)) {
-                            eligible.add(blockPos3);
+                            orderedPos.put(manhattanDistance, blockPos3);
                         }
                     }
                 }
             }
+            eligible.addAll(orderedPos.values());
         }
         return eligible;
     }

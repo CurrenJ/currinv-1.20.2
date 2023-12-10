@@ -46,4 +46,9 @@ public class ScanNearbyChestsMode implements IFullSuiteSorterMode {
     public boolean doContainerInteractionTick(MinecraftClient client) {
         return false;
     }
+
+    @Override
+    public void onContainerAccessFail(MinecraftClient client, List<LootableContainerBlockEntity> containersToVisit) {
+
+    }
 }

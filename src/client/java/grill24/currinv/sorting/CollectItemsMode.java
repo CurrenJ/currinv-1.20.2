@@ -48,6 +48,11 @@ public class CollectItemsMode implements IFullSuiteSorterMode {
         return false;
     }
 
+    @Override
+    public void onContainerAccessFail(MinecraftClient client, List<LootableContainerBlockEntity> containersToVisit) {
+
+    }
+
     public void setItemsToCollect(List<Item> items) {
         itemsToCollect = items;
     }

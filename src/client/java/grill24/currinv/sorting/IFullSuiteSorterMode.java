@@ -13,4 +13,6 @@ public interface IFullSuiteSorterMode {
     boolean doContainerScreenInteractionTick(MinecraftClient client, Screen screen, List<LootableContainerBlockEntity> containersToVisit, int currentContainerIndex);
 
     boolean doContainerInteractionTick(MinecraftClient client);
+
+    void onContainerAccessFail(MinecraftClient client, List<LootableContainerBlockEntity> containersToVisit);
 }

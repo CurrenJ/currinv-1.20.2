@@ -75,7 +75,7 @@ public class NavigationUtility {
         if (directions.size() == 3) {
             boolean blockedByImmediatelyAdjacentBlocks = true;
             for (Direction direction : directions) {
-                if (world.isAir(see.offset(direction))) {
+                if (world.isAir(see.offset(direction)) || world.getBlockState(see.offset(direction)).getCollisionShape(world, see.offset(direction)).isEmpty()) {
                     blockedByImmediatelyAdjacentBlocks = false;
                 }
             }
@@ -103,7 +103,7 @@ public class NavigationUtility {
             }
 
             // If the blockPos along the vector is not air, the player cannot see the blockPos.
-            if (!world.getBlockState(blockPosAlongVectorBlockPos).isAir()) {
+            if (!world.getBlockState(blockPosAlongVectorBlockPos).isAir() && !( world.getBlockState(blockPosAlongVectorBlockPos).getCollisionShape(world, blockPosAlongVectorBlockPos).isEmpty())) {
                 return false;
             }
         }
@@ -112,6 +112,15 @@ public class NavigationUtility {
 
     public static boolean hasSpaceForPlayerToStandAtBlockPos(ClientWorld world, ClientPlayerEntity player, BlockPos blockPos) {
         return (canPathfindThrough(world, blockPos) || world.getBlockState(blockPos).getBlock() instanceof CarpetBlock) && canPathfindThrough(world, blockPos.up());
+    }
+
+    public static boolean hasSpaceForPlayerToStandAtBlockPos(ClientWorld world, ClientPlayerEntity player, BlockPos blockPos, int additionalHeadClearance) {
+        boolean hasSpaceForPlayerToStand = (canPathfindThrough(world, blockPos) || world.getBlockState(blockPos).getBlock() instanceof CarpetBlock) && canPathfindThrough(world, blockPos.up());
+        for (int i = 1; i <= additionalHeadClearance; i++) {
+            hasSpaceForPlayerToStand &= canPathfindThrough(world, blockPos.up(i));
+        }
+
+        return hasSpaceForPlayerToStand;
     }
 
     public static boolean isNotLava(ClientWorld world, BlockPos pos) {
