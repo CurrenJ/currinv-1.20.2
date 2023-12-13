@@ -1,5 +1,7 @@
 package grill24.currinv.navigation;
 
+import grill24.currinv.CurrInvClient;
+import net.fabricmc.loader.impl.lib.sat4j.core.Vec;
 import net.minecraft.block.*;
 import net.minecraft.client.network.ClientPlayerEntity;
 import net.minecraft.client.network.ClientPlayerInteractionManager;
@@ -71,6 +73,7 @@ public class NavigationUtility {
     public static boolean canPlayerSeeBlockPosFromBlockPos(ClientPlayerInteractionManager interactionManager, ClientWorld world, ClientPlayerEntity player, BlockPos from, BlockPos see) {
         // Check if the see blockPos is blocked by any of the three blocks facing hte from pos that are immediately adjacent to it.
         // This eases the burden on the raycast. If the player is looking at a blockPos that is blocked by the three blocks immediately adjacent to it, the player cannot see the blockPos.
+        // EDIT: Is this still worth it? The random offset handles these cases nicely. But this still is probably more efficient.
         List<Direction> directions = getRelativeDirections(see, from);
         if (directions.size() == 3) {
             boolean blockedByImmediatelyAdjacentBlocks = true;
@@ -84,16 +87,21 @@ public class NavigationUtility {
         }
 
 
+        // This offset helps us avoid hitting the vertices of block collision boxes
+        Vec3d offsetVec = new Vec3d(0.15, 0, 0);
+
         // Check if there are any blocks between player and blockPos that would block the player's line of sight.
-        Vec3d fromVec = from.toCenterPos().subtract(0, 0.5, 0).add(0, player.getEyeHeight(player.getPose()), 0);
-        Vec3d seeVec = getBlockFaceToLookTowards(world, from.toCenterPos(), see.toCenterPos());
+        Vec3d fromVec = from.toCenterPos().subtract(0, 0.5, 0).add(0, player.getEyeHeight(player.getPose()), 0).add(offsetVec);
+        Vec3d seeVec = getBlockFaceToLookTowards(world, from.toCenterPos(), see.toCenterPos()).add(offsetVec);
 
         // Get the vector from the player to the blockPos.
         Vec3d rayVec = seeVec.subtract(fromVec);
         double reachDistance = interactionManager.getReachDistance();
 
+        CurrInvClient.currInvDebugRenderer.addLine(fromVec, seeVec, 10000);
+
         //Iterate through each block along the vector from the player to the blockPos.
-        double stepSize = 0.05;
+        double stepSize = 0.025;
         for (double i = 0; i < reachDistance + stepSize; i += stepSize) {
             Vec3d blockPosAlongVector = fromVec.add(rayVec.normalize().multiply(i));
             BlockPos blockPosAlongVectorBlockPos = new BlockPos((int) Math.floor(blockPosAlongVector.getX()), (int) Math.floor(blockPosAlongVector.getY()), (int) Math.floor(blockPosAlongVector.getZ()));

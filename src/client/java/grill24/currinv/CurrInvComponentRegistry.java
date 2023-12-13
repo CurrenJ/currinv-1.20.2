@@ -14,6 +14,7 @@ import grill24.currinv.component.*;
 import grill24.currinv.component.accessor.GetFieldValue;
 import grill24.currinv.component.accessor.GetNewFieldValue;
 import grill24.currinv.component.accessor.SetNewFieldValue;
+import grill24.currinv.debug.CurrInvDebugRenderer;
 import grill24.currinv.debug.DebugParticles;
 import grill24.currinv.debug.DebugUtility;
 import net.fabricmc.fabric.api.client.command.v2.ClientCommandManager;
@@ -67,6 +68,7 @@ public class CurrInvComponentRegistry {
         registerComponent(CurrInvClient.sorter);
         registerComponent(CurrInvClient.fullSuiteSorter);
         registerComponent(DebugParticles.class);
+        registerComponent(CurrInvClient.currInvDebugRenderer);
     }
 
     private static void registerComponent(Object component) {
