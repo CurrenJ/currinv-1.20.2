@@ -3,6 +3,7 @@
   "package": "grill24.currinv.mixin.client",
   "compatibilityLevel": "JAVA_17",
   "client": [
+    "DebugRendererMixin",
     "KeyboardInputMixin",
     "MouseMixin",
     "ShulkerBoxScreenHandlerMixin"

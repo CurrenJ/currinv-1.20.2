@@ -4,6 +4,7 @@ import com.mojang.brigadier.context.CommandContext;
 import grill24.currinv.component.Command;
 import grill24.currinv.component.CommandAction;
 import grill24.currinv.component.StaticToString;
+import grill24.currinv.debug.CurrInvDebugRenderer;
 import grill24.currinv.debug.DebugUtility;
 import grill24.currinv.navigation.PlayerNavigator;
 import grill24.currinv.persistence.Config;
@@ -20,18 +21,18 @@ import net.minecraft.util.ActionResult;
 @Command("currInv")
 public class CurrInvClient implements ClientModInitializer {
     public static Config config;
-
     public static Sorter sorter;
     public static PlayerNavigator navigator;
     public static FullSuiteSorter fullSuiteSorter;
+    public static CurrInvDebugRenderer currInvDebugRenderer;
 
     @Override
     public void onInitializeClient() {
         config = new Config();
-
         sorter = new Sorter();
         navigator = new PlayerNavigator();
         fullSuiteSorter = new FullSuiteSorter();
+        currInvDebugRenderer = new CurrInvDebugRenderer();
 
         registerUseBlockEvents();
 

@@ -495,25 +495,29 @@ public class FullSuiteSorter {
             int offset = -Math.floorDiv(cubeSideLength, 2);
 
             TreeMap<Integer, BlockPos> orderedPos = new TreeMap<>();
+            HashSet<BlockPos> seen = new HashSet<>();
             // Iterate through the faces of the cube
             for (int x = offset; x < cubeSideLength + offset; x += cubeSideLength - 1) {
                 for (int y = offset; y < cubeSideLength + offset; y++) {
                     for (int z = offset; z < cubeSideLength + offset; z++) {
                         BlockPos blockPos1 = containerPos.add(x, y, z);
                         int manhattanDistance = Math.abs(x) + Math.abs(y) + Math.abs(z);
-                        if (canAccessContainerFromBlockPos(interactionManager, world, player, containerPos, blockPos1)) {
+                        if (!seen.contains(blockPos1) && canAccessContainerFromBlockPos(interactionManager, world, player, containerPos, blockPos1)) {
                             orderedPos.put(manhattanDistance, blockPos1);
                         }
+                        seen.add(blockPos1);
 
                         BlockPos blockPos2 = containerPos.add(y, x, z);
-                        if (canAccessContainerFromBlockPos(interactionManager, world, player, containerPos, blockPos2)) {
+                        if (!seen.contains(blockPos2) && canAccessContainerFromBlockPos(interactionManager, world, player, containerPos, blockPos2)) {
                             orderedPos.put(manhattanDistance, blockPos2);
                         }
+                        seen.add(blockPos2);
 
                         BlockPos blockPos3 = containerPos.add(y, z, x);
-                        if (canAccessContainerFromBlockPos(interactionManager, world, player, containerPos, blockPos3)) {
+                        if (!seen.contains(blockPos3) && canAccessContainerFromBlockPos(interactionManager, world, player, containerPos, blockPos3)) {
                             orderedPos.put(manhattanDistance, blockPos3);
                         }
+                        seen.add(blockPos3);
                     }
                 }
             }
