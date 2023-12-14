@@ -13,6 +13,8 @@ import java.lang.annotation.Target;
 public @interface CommandAction {
     String value() default "";
 
+    String parentKey() default "";
+
     Class<? extends ArgumentType>[] arguments() default {};
 
     String[] argumentKeys() default {};

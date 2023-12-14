@@ -5,6 +5,7 @@ import grill24.currinv.component.Command;
 import grill24.currinv.component.CommandAction;
 import grill24.currinv.component.StaticToString;
 import grill24.currinv.debug.CurrInvDebugRenderer;
+import grill24.currinv.debug.DebugParticles;
 import grill24.currinv.debug.DebugUtility;
 import grill24.currinv.navigation.PlayerNavigator;
 import grill24.currinv.persistence.Config;
@@ -20,6 +21,7 @@ import net.minecraft.util.ActionResult;
 
 @Command("currInv")
 public class CurrInvClient implements ClientModInitializer {
+    public static ModComponentRegistry modComponentRegistry;
     public static Config config;
     public static Sorter sorter;
     public static PlayerNavigator navigator;
@@ -36,20 +38,15 @@ public class CurrInvClient implements ClientModInitializer {
 
         registerUseBlockEvents();
 
-        CurrInvComponentRegistry.registerComponents();
+        modComponentRegistry = new ModComponentRegistry(CurrInvClient.class);
+        modComponentRegistry.registerComponent(CurrInvClient.config);
+        modComponentRegistry.registerComponent(CurrInvClient.navigator);
+        modComponentRegistry.registerComponent(CurrInvClient.sorter);
+        modComponentRegistry.registerComponent(CurrInvClient.fullSuiteSorter);
+        modComponentRegistry.registerComponent(DebugParticles.class);
+        modComponentRegistry.registerComponent(CurrInvClient.currInvDebugRenderer);
+        modComponentRegistry.registerComponents();
     }
-
-//	public static void registerTickEvents() {
-//		ClientTickEvents.END_CLIENT_TICK.register((client) -> {
-//			for (ClientTickingFeature action : CurrInvCommandRegistry.CLIENT_TICKING_FEATURES) {
-//				action.onUpdate(client);
-//			}
-//
-//			fullSuiteSorter.onUpdateTick(client);
-//			if(CurrInvClient.sorter.isSorting && client.player != null && client.player.currentScreenHandler instanceof PlayerScreenHandler)
-//				CurrInvClient.sorter.stopSorting();
-//		});
-//	}
 
     public static void registerUseBlockEvents() {
         UseBlockCallback.EVENT.register((player, world, hand, hitResult) -> {
