@@ -1,4 +1,4 @@
-package grill24.currinv;
+package grill24.currinv.component;
 
 import com.mojang.brigadier.arguments.ArgumentType;
 import com.mojang.brigadier.arguments.BoolArgumentType;
@@ -10,11 +10,9 @@ import com.mojang.brigadier.exceptions.CommandSyntaxException;
 import com.mojang.brigadier.suggestion.SuggestionProvider;
 import com.mojang.brigadier.suggestion.Suggestions;
 import com.mojang.brigadier.suggestion.SuggestionsBuilder;
-import grill24.currinv.component.*;
 import grill24.currinv.component.accessor.GetFieldValue;
 import grill24.currinv.component.accessor.GetNewFieldValue;
 import grill24.currinv.component.accessor.SetNewFieldValue;
-import grill24.currinv.debug.DebugParticles;
 import grill24.currinv.debug.DebugUtility;
 import net.fabricmc.fabric.api.client.command.v2.ClientCommandManager;
 import net.fabricmc.fabric.api.client.command.v2.ClientCommandRegistrationCallback;
@@ -26,87 +24,128 @@ import net.minecraft.client.gui.screen.Screen;
 import net.minecraft.client.gui.screen.ingame.HandledScreen;
 import net.minecraft.command.CommandRegistryAccess;
 import net.minecraft.command.argument.ItemStackArgumentType;
+import oshi.util.tuples.Pair;
 
 import java.lang.reflect.Field;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.lang.reflect.Parameter;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 
-public class CurrInvComponentRegistry {
+public class ModComponentRegistry {
     private record ComponentDto(Object instance, Class<?> clazz) {
     }
 
-    private static final List<ComponentDto> COMPONENTS;
+    private List<ComponentDto> components;
 
     private record ClientTickMethodDto(Object instance, Method method, int tickRate) {
     }
 
-    private static final List<ClientTickMethodDto> CLIENT_TICK_METHODS;
+    private List<ClientTickMethodDto> clientTickMethods;
 
     private record ScreenMethodDto(Object instance, Method method) {
     }
 
-    private static final List<ScreenMethodDto> SCREEN_TICK_METHODS;
-    private static final List<ScreenMethodDto> SCREEN_INIT_METHODS;
+    private List<ScreenMethodDto> screenTickMethods;
+    private List<ScreenMethodDto> screenInitMethods;
 
-    private static LiteralArgumentBuilder<FabricClientCommandSource> commandRoot;
+    private CommandTreeNode commandTreeRoot;
+    private ComponentDto commandRootComponent;
 
-    private static int tickCounter = 0;
+    private int tickCounter;
 
-    static {
-        COMPONENTS = new ArrayList<>();
-        CLIENT_TICK_METHODS = new ArrayList<>();
-        SCREEN_TICK_METHODS = new ArrayList<>();
-        SCREEN_INIT_METHODS = new ArrayList<>();
+    public static class CommandTreeNode {
+        public String literal;
+        public LiteralArgumentBuilder<FabricClientCommandSource> command;
+        public HashMap<String, CommandTreeNode> children;
 
-        registerComponent(CurrInvClient.config);
-        registerComponent(CurrInvClient.navigator);
-        registerComponent(CurrInvClient.sorter);
-        registerComponent(CurrInvClient.fullSuiteSorter);
-        registerComponent(DebugParticles.class);
+        public CommandTreeNode(String literal, LiteralArgumentBuilder<FabricClientCommandSource> command) {
+            this.literal = literal;
+            this.command = command;
+            this.children = new HashMap<>();
+        }
+
+        public Optional<CommandTreeNode> getChildNode(String literal) {
+            return children.containsKey(literal) ? Optional.of(children.get(literal)) : Optional.empty();
+        }
     }
 
-    private static void registerComponent(Object component) {
-        COMPONENTS.add(new ComponentDto(component, component.getClass()));
+    public ModComponentRegistry(String commandRootString) {
+        commandTreeRoot = new CommandTreeNode(commandRootString, ClientCommandManager.literal(commandRootString));
+        initialize();
     }
 
-    private static void registerComponent(Class<?> clazz) {
-        COMPONENTS.add(new ComponentDto(null, clazz));
+    public ModComponentRegistry(Class<?> clazz) {
+        commandRootComponent = new ComponentDto(null, clazz);
+        initialize();
     }
 
-    public static void registerComponents() {
+    public ModComponentRegistry(Object instance) {
+        commandRootComponent = new ComponentDto(instance, instance.getClass());
+        initialize();
+    }
+
+    private void initialize() {
+        components = new ArrayList<>();
+        clientTickMethods = new ArrayList<>();
+        screenTickMethods = new ArrayList<>();
+        screenInitMethods = new ArrayList<>();
+    }
+
+    public void registerComponent(Object component) {
+        components.add(new ComponentDto(component, component.getClass()));
+    }
+
+    public void registerComponent(Class<?> clazz) {
+        components.add(new ComponentDto(null, clazz));
+    }
+
+    public void registerComponents() {
         registerComponentCommands();
         registerTickEvents();
         registerScreenTickEvents();
     }
 
-    public static void registerComponentCommands() {
+    private void registerComponentCommands() {
         ClientCommandRegistrationCallback.EVENT.register((dispatcher, registryAccess) -> {
-            commandRoot = buildCommandsFromAnnotations(new ComponentDto(null, CurrInvClient.class), registryAccess);
-            for (ComponentDto component : CurrInvComponentRegistry.COMPONENTS) {
-                if (ComponentUtility.hasCustomClassAnnotation(component.clazz, Command.class))
-                    commandRoot = commandRoot.then(buildCommandsFromAnnotations(component, registryAccess));
+            if (commandTreeRoot == null && commandRootComponent != null) {
+                LiteralArgumentBuilder<FabricClientCommandSource> rootCommand = buildCommandsFromAnnotations(commandRootComponent, registryAccess, commandTreeRoot);
+                commandTreeRoot = new CommandTreeNode(ComponentUtility.getCommandKey(commandRootComponent.clazz), rootCommand);
             }
-            dispatcher.register(commandRoot);
+
+            for (ComponentDto component : this.components) {
+                if (ComponentUtility.hasCustomClassAnnotation(component.clazz, Command.class)) {
+                    LiteralArgumentBuilder<FabricClientCommandSource> command = buildCommandsFromAnnotations(component, registryAccess, commandTreeRoot);
+
+                    commandTreeRoot.command.then(command);
+
+                    String commandKey = ComponentUtility.getCommandKey(component.clazz);
+                    ;
+                    commandTreeRoot.children.put(commandKey, new CommandTreeNode(commandKey, command));
+                }
+            }
+
+            dispatcher.register(commandTreeRoot.command);
         });
     }
 
     /**
      * Register tick events for all methods with {@link ClientTick} annotations.
      */
-    public static void registerTickEvents() {
-        for (ComponentDto component : CurrInvComponentRegistry.COMPONENTS) {
+    private void registerTickEvents() {
+        for (ComponentDto component : this.components) {
             for (Method method : ComponentUtility.getClientTickMethods(component.clazz)) {
-                CLIENT_TICK_METHODS.add(new ClientTickMethodDto(component.instance, method, method.getAnnotation(ClientTick.class).value()));
+                this.clientTickMethods.add(new ClientTickMethodDto(component.instance, method, method.getAnnotation(ClientTick.class).value()));
             }
         }
 
         ClientTickEvents.END_CLIENT_TICK.register((client) -> {
             tickCounter++;
-            for (ClientTickMethodDto clientTickMethodDto : CLIENT_TICK_METHODS) {
+            for (ClientTickMethodDto clientTickMethodDto : clientTickMethods) {
                 doClientTick(clientTickMethodDto);
             }
             if (tickCounter == Integer.MAX_VALUE)
@@ -117,75 +156,61 @@ public class CurrInvComponentRegistry {
     /**
      * Register screen tick events for all methods with {@link ScreenTick} or {@link ScreenInit} annotations..
      */
-    public static void registerScreenTickEvents() {
-        for (ComponentDto component : CurrInvComponentRegistry.COMPONENTS) {
+    private void registerScreenTickEvents() {
+        for (ComponentDto component : this.components) {
             for (Method method : ComponentUtility.getScreenTickMethods(component.clazz)) {
-                SCREEN_TICK_METHODS.add(new ScreenMethodDto(component.instance, method));
+                this.screenTickMethods.add(new ScreenMethodDto(component.instance, method));
             }
 
             for (Method method : ComponentUtility.getScreenInitMethods(component.clazz)) {
-                SCREEN_INIT_METHODS.add(new ScreenMethodDto(component.instance, method));
+                this.screenInitMethods.add(new ScreenMethodDto(component.instance, method));
             }
         }
 
         ScreenEvents.AFTER_INIT.register((client, screen, scaledWidth, scaledHeight) -> {
             if (screen instanceof HandledScreen<?>) {
-                for (ScreenMethodDto screenInitMethodDto : SCREEN_INIT_METHODS) {
-                    try {
-                        screenInitMethodDto.method.setAccessible(true);
-                        Parameter[] parameters = screenInitMethodDto.method.getParameters();
-                        if (parameters.length == 2 && parameters[0].getType() == MinecraftClient.class && parameters[1].getType() == Screen.class)
-                            screenInitMethodDto.method.invoke(screenInitMethodDto.instance, client, screen);
-                        else if (parameters.length == 1 && parameters[0].getType() == Screen.class)
-                            screenInitMethodDto.method.invoke(screenInitMethodDto.instance, screen);
-                        else if (parameters.length == 1 && parameters[0].getType() == MinecraftClient.class)
-                            screenInitMethodDto.method.invoke(screenInitMethodDto.instance, client);
-                        else if (parameters.length == 0)
-                            screenInitMethodDto.method.invoke(screenInitMethodDto.instance);
-                        else
-                            throw new Exception("Invalid parameters for subCommand action method: " + screenInitMethodDto.method.getName());
-                    } catch (Exception e) {
-                        e.printStackTrace();
-                    }
-                }
+                registerScreenMethods(client, screen, screenInitMethods);
 
                 // Repeatedly called while screen is being rendered (each tick).
                 ScreenEvents.afterTick(screen).register((tickScreen) -> {
-                    for (ScreenMethodDto screenMethodDto : SCREEN_TICK_METHODS) {
-                        try {
-                            screenMethodDto.method.setAccessible(true);
-                            Parameter[] parameters = screenMethodDto.method.getParameters();
-                            if (parameters.length == 2 && parameters[0].getType() == MinecraftClient.class && parameters[1].getType() == Screen.class)
-                                screenMethodDto.method.invoke(screenMethodDto.instance, client, screen);
-                            else if (parameters.length == 1 && parameters[0].getType() == Screen.class)
-                                screenMethodDto.method.invoke(screenMethodDto.instance, screen);
-                            else if (parameters.length == 1 && parameters[0].getType() == MinecraftClient.class)
-                                screenMethodDto.method.invoke(screenMethodDto.instance, client);
-                            else if (parameters.length == 0)
-                                screenMethodDto.method.invoke(screenMethodDto.instance);
-                            else
-                                throw new Exception("Invalid parameters for subCommand action method: " + screenMethodDto.method.getName());
-                        } catch (Exception e) {
-                            e.printStackTrace();
-                        }
-                    }
+                    registerScreenMethods(client, screen, screenTickMethods);
                 });
             }
         });
     }
 
+    private void registerScreenMethods(MinecraftClient client, Screen screen, List<ScreenMethodDto> screenInitMethods) {
+        for (ScreenMethodDto screenInitMethodDto : screenInitMethods) {
+            try {
+                screenInitMethodDto.method.setAccessible(true);
+                Parameter[] parameters = screenInitMethodDto.method.getParameters();
+                if (parameters.length == 2 && parameters[0].getType() == MinecraftClient.class && parameters[1].getType() == Screen.class)
+                    screenInitMethodDto.method.invoke(screenInitMethodDto.instance, client, screen);
+                else if (parameters.length == 1 && parameters[0].getType() == Screen.class)
+                    screenInitMethodDto.method.invoke(screenInitMethodDto.instance, screen);
+                else if (parameters.length == 1 && parameters[0].getType() == MinecraftClient.class)
+                    screenInitMethodDto.method.invoke(screenInitMethodDto.instance, client);
+                else if (parameters.length == 0)
+                    screenInitMethodDto.method.invoke(screenInitMethodDto.instance);
+                else
+                    throw new Exception("Invalid parameters for subCommand action method: " + screenInitMethodDto.method.getName());
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+        }
+    }
+
     /**
      * Build command from an object component whose class has the {@link Command} annotation.
      */
-    private static LiteralArgumentBuilder<FabricClientCommandSource> buildCommandsFromAnnotations(ComponentDto component, CommandRegistryAccess commandRegistryAccess) {
+    private static LiteralArgumentBuilder<FabricClientCommandSource> buildCommandsFromAnnotations(ComponentDto component, CommandRegistryAccess commandRegistryAccess, CommandTreeNode commandRoot) {
         MinecraftClient client = MinecraftClient.getInstance();
 
         if (client != null) {
             Class<?> clazz = component.clazz;
 
             if (ComponentUtility.hasCustomClassAnnotation(clazz, Command.class)) {
-                Command annotation = clazz.getAnnotation(Command.class);
-                String commandKey = annotation.value().isEmpty() ? ComponentUtility.convertDeclarationToCamel(clazz.getSimpleName()) : annotation.value();
+                String commandKey = ComponentUtility.getCommandKey(component.clazz);
 
                 com.mojang.brigadier.Command<FabricClientCommandSource> printInstance = (context) -> {
                     if (component.instance != null)
@@ -195,15 +220,15 @@ public class CurrInvComponentRegistry {
                     return 1;
                 };
 
-                LiteralArgumentBuilder<FabricClientCommandSource> command = ClientCommandManager.literal(commandKey).executes(printInstance);
 
+                LiteralArgumentBuilder<FabricClientCommandSource> command = ComponentUtility.getCommandOrElse(commandRoot, commandKey, (key) -> ClientCommandManager.literal(commandKey)).executes(printInstance);
 
-                for (LiteralArgumentBuilder<FabricClientCommandSource> subCommand : buildCommandsFromFields(component)) {
-                    command = command.then(subCommand);
+                for (Pair<CommandOption, LiteralArgumentBuilder<FabricClientCommandSource>> subCommandData : buildCommandsFromFields(component)) {
+                    attachSubCommandToParentCommand(commandRoot, subCommandData.getA().parentKey(), command, subCommandData.getB());
                 }
 
-                for (LiteralArgumentBuilder<FabricClientCommandSource> subCommand : buildCommandsFromMethods(component, commandRegistryAccess)) {
-                    command = command.then(subCommand);
+                for (Pair<CommandAction, LiteralArgumentBuilder<FabricClientCommandSource>> subCommandData : buildCommandsFromMethods(component, commandRegistryAccess)) {
+                    attachSubCommandToParentCommand(commandRoot, subCommandData.getA().parentKey(), command, subCommandData.getB());
                 }
 
                 return command;
@@ -212,13 +237,22 @@ public class CurrInvComponentRegistry {
         return null;
     }
 
+    private static void attachSubCommandToParentCommand(CommandTreeNode commandRoot, String parentOverrideKey, LiteralArgumentBuilder<FabricClientCommandSource> defaultParentCommand, LiteralArgumentBuilder<FabricClientCommandSource> subCommand) {
+        if (parentOverrideKey.isEmpty())
+            defaultParentCommand.then(subCommand);
+        else {
+            LiteralArgumentBuilder<FabricClientCommandSource> parentCommand = ComponentUtility.getCommandOrElse(commandRoot, parentOverrideKey, (key) -> ClientCommandManager.literal(parentOverrideKey));
+            parentCommand.then(subCommand);
+        }
+    }
+
     /**
      * Build commands from fields with the {@link CommandOption} in an object's class.
      */
-    private static List<LiteralArgumentBuilder<FabricClientCommandSource>> buildCommandsFromFields(ComponentDto component) {
+    private static List<Pair<CommandOption, LiteralArgumentBuilder<FabricClientCommandSource>>> buildCommandsFromFields(ComponentDto component) {
         Class<?> clazz = component.clazz;
 
-        List<LiteralArgumentBuilder<FabricClientCommandSource>> commands = new ArrayList<>();
+        List<Pair<CommandOption, LiteralArgumentBuilder<FabricClientCommandSource>>> commands = new ArrayList<>();
         for (Field field : ComponentUtility.getCommandOptionFields(clazz)) {
             Class<?> fieldClass = field.getType();
             CommandOption optionAnnotation = field.getAnnotation(CommandOption.class);
@@ -319,6 +353,7 @@ public class CurrInvComponentRegistry {
             subCommand = subCommand.executes(noOptionProvidedFunc);
 
             if (argumentType != null && getNewFieldValue != null && setNewFieldValue != null) {
+
                 RequiredArgumentBuilder<FabricClientCommandSource, ?> argument = ClientCommandManager.argument(optionKey, argumentType);
                 if (suggestionProvider != null)
                     argument = argument.suggests(suggestionProvider);
@@ -330,7 +365,7 @@ public class CurrInvComponentRegistry {
                 subCommand.then(argument);
             }
 
-            commands.add(subCommand);
+            commands.add(new Pair<>(optionAnnotation, subCommand));
         }
         return commands;
     }
@@ -338,12 +373,12 @@ public class CurrInvComponentRegistry {
     /**
      * Build commands from methods with the {@link CommandAction} in an object's class.
      */
-    private static List<LiteralArgumentBuilder<FabricClientCommandSource>> buildCommandsFromMethods(ComponentDto component, CommandRegistryAccess commandRegistryAccess) {
+    private static List<Pair<CommandAction, LiteralArgumentBuilder<FabricClientCommandSource>>> buildCommandsFromMethods(ComponentDto component, CommandRegistryAccess commandRegistryAccess) {
         Class<?> clazz = component.clazz;
         MinecraftClient client = MinecraftClient.getInstance();
         assert client != null;
 
-        List<LiteralArgumentBuilder<FabricClientCommandSource>> commands = new ArrayList<>();
+        List<Pair<CommandAction, LiteralArgumentBuilder<FabricClientCommandSource>>> commands = new ArrayList<>();
         for (Method method : ComponentUtility.getCommandActionMethods(clazz)) {
             CommandAction actionAnnotation = method.getAnnotation(CommandAction.class);
             String actionKey = actionAnnotation.value().isEmpty() ? ComponentUtility.convertDeclarationToCamel(method.getName()) : actionAnnotation.value();
@@ -393,12 +428,12 @@ public class CurrInvComponentRegistry {
             else
                 subCommand = subCommand.executes(action);
 
-            commands.add(subCommand);
+            commands.add(new Pair<>(actionAnnotation, subCommand));
         }
         return commands;
     }
 
-    private static void doClientTick(ClientTickMethodDto clientTickMethodDto) {
+    private void doClientTick(ClientTickMethodDto clientTickMethodDto) {
         if (tickCounter % clientTickMethodDto.tickRate == 0) {
             try {
                 clientTickMethodDto.method.setAccessible(true);

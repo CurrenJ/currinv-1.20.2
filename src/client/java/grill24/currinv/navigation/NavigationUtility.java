@@ -1,5 +1,8 @@
 package grill24.currinv.navigation;
 
+import grill24.currinv.CurrInvClient;
+import grill24.currinv.debug.CurrInvDebugRenderer;
+import grill24.currinv.sorting.FullSuiteSorter;
 import net.minecraft.block.*;
 import net.minecraft.client.network.ClientPlayerEntity;
 import net.minecraft.client.network.ClientPlayerInteractionManager;
@@ -7,15 +10,18 @@ import net.minecraft.client.world.ClientWorld;
 import net.minecraft.entity.ai.pathing.NavigationType;
 import net.minecraft.registry.tag.BlockTags;
 import net.minecraft.registry.tag.FluidTags;
+import net.minecraft.util.hit.BlockHitResult;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.Direction;
 import net.minecraft.util.math.Vec3d;
 import net.minecraft.util.math.Vec3i;
+import net.minecraft.util.shape.VoxelShape;
 import org.joml.Vector2d;
 
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
+import java.util.Random;
 
 public class NavigationUtility {
     public static boolean canPlayerStandOnBlockBelow(ClientWorld world, ClientPlayerEntity player, BlockPos pos) {
@@ -71,47 +77,87 @@ public class NavigationUtility {
     public static boolean canPlayerSeeBlockPosFromBlockPos(ClientPlayerInteractionManager interactionManager, ClientWorld world, ClientPlayerEntity player, BlockPos from, BlockPos see) {
         // Check if the see blockPos is blocked by any of the three blocks facing hte from pos that are immediately adjacent to it.
         // This eases the burden on the raycast. If the player is looking at a blockPos that is blocked by the three blocks immediately adjacent to it, the player cannot see the blockPos.
+        // EDIT: Is this still worth it? The random offset handles these cases nicely. But this still is probably more efficient.
         List<Direction> directions = getRelativeDirections(see, from);
-        if (directions.size() == 3) {
-            boolean blockedByImmediatelyAdjacentBlocks = true;
-            for (Direction direction : directions) {
-                if (world.isAir(see.offset(direction))) {
-                    blockedByImmediatelyAdjacentBlocks = false;
-                }
-            }
-            if (blockedByImmediatelyAdjacentBlocks)
-                return false;
+        boolean blockedByImmediatelyAdjacentBlocks = true;
+        List<BlockPos> adjacentBlocksToCheck = new ArrayList<>();
+        for (Direction direction : directions) {
+            adjacentBlocksToCheck.add(see.offset(direction));
         }
 
+        for (BlockPos blockPos : adjacentBlocksToCheck) {
+            if (world.isAir(blockPos) || world.getBlockState(blockPos).getCollisionShape(world, blockPos).isEmpty()) {
+                blockedByImmediatelyAdjacentBlocks = false;
+            }
+        }
+        if (blockedByImmediatelyAdjacentBlocks)
+            return false;
+
+        if (from.equals(player.getBlockPos()))
+            System.out.println("ASDSA");
+
+        // This offset helps us avoid hitting the vertices of block collision boxes.
+        // IE when three blocks meet at one corner, how do we stop the raycast from perfectly passing through that corner
+        double offsetAmountMax = 0.1;
+        double offsetAmountMin = 0.05;
+        Random random = new Random(from.hashCode());
+        Vec3d offsetVec = new Vec3d(random.nextDouble(offsetAmountMin, offsetAmountMax) * (random.nextBoolean() ? 1 : -1), random.nextDouble(offsetAmountMin, offsetAmountMax) * (random.nextBoolean() ? 1 : -1), random.nextDouble(offsetAmountMin, offsetAmountMax) * (random.nextBoolean() ? 1 : -1));
 
         // Check if there are any blocks between player and blockPos that would block the player's line of sight.
-        Vec3d fromVec = from.toCenterPos().subtract(0, 0.5, 0).add(0, player.getEyeHeight(player.getPose()), 0);
-        Vec3d seeVec = getBlockFaceToLookTowards(world, from.toCenterPos(), see.toCenterPos());
+        Vec3d fromVec = from.toCenterPos().subtract(0, 0.5, 0).add(0, player.getEyeHeight(player.getPose()), 0).add(offsetVec);
+        Vec3d seeVec = getBlockFaceToLookTowards(world, BlockPos.ofFloored(fromVec).toCenterPos(), see.toCenterPos()).add(offsetVec);
+
 
         // Get the vector from the player to the blockPos.
         Vec3d rayVec = seeVec.subtract(fromVec);
         double reachDistance = interactionManager.getReachDistance();
 
+
+        List<BlockPos> blockPosAlongRay = new ArrayList<>();
         //Iterate through each block along the vector from the player to the blockPos.
         double stepSize = 0.05;
         for (double i = 0; i < reachDistance + stepSize; i += stepSize) {
             Vec3d blockPosAlongVector = fromVec.add(rayVec.normalize().multiply(i));
             BlockPos blockPosAlongVectorBlockPos = new BlockPos((int) Math.floor(blockPosAlongVector.getX()), (int) Math.floor(blockPosAlongVector.getY()), (int) Math.floor(blockPosAlongVector.getZ()));
+            if (blockPosAlongRay.isEmpty() || blockPosAlongRay.get(blockPosAlongRay.size() - 1) != blockPosAlongVectorBlockPos)
+                blockPosAlongRay.add(blockPosAlongVectorBlockPos);
+        }
 
-            if (blockPosAlongVectorBlockPos.equals(see)) {
+        // Check each block pos along raycast to see if we hit it's collision shape
+        for (BlockPos blockPos : blockPosAlongRay) {
+            if (blockPos.equals(see)) {
+                if (CurrInvClient.fullSuiteSorter.debugRays == FullSuiteSorter.DebugRays.ALL || CurrInvClient.fullSuiteSorter.debugRays == FullSuiteSorter.DebugRays.SUCCESS)
+                    CurrInvClient.currInvDebugRenderer.addLine(fromVec, seeVec, 10000, CurrInvDebugRenderer.GREEN);
+
                 return true;
             }
 
-            // If the blockPos along the vector is not air, the player cannot see the blockPos.
-            if (!world.getBlockState(blockPosAlongVectorBlockPos).isAir()) {
+            VoxelShape voxelShape = world.getBlockState(blockPos).getCollisionShape(world, blockPos);
+            BlockHitResult blockHitResult = voxelShape.raycast(fromVec, seeVec, blockPos);
+            if (!voxelShape.isEmpty() || blockHitResult != null) {
+                if (CurrInvClient.fullSuiteSorter.debugRays == FullSuiteSorter.DebugRays.ALL || CurrInvClient.fullSuiteSorter.debugRays == FullSuiteSorter.DebugRays.FAIL)
+                    CurrInvClient.currInvDebugRenderer.addLine(fromVec, seeVec, 10000, CurrInvDebugRenderer.RED);
+
                 return false;
             }
         }
+        if (CurrInvClient.fullSuiteSorter.debugRays == FullSuiteSorter.DebugRays.ALL || CurrInvClient.fullSuiteSorter.debugRays == FullSuiteSorter.DebugRays.FAIL)
+            CurrInvClient.currInvDebugRenderer.addLine(fromVec, seeVec, 10000, CurrInvDebugRenderer.GREEN);
+
         return false;
     }
 
     public static boolean hasSpaceForPlayerToStandAtBlockPos(ClientWorld world, ClientPlayerEntity player, BlockPos blockPos) {
         return (canPathfindThrough(world, blockPos) || world.getBlockState(blockPos).getBlock() instanceof CarpetBlock) && canPathfindThrough(world, blockPos.up());
+    }
+
+    public static boolean hasSpaceForPlayerToStandAtBlockPos(ClientWorld world, ClientPlayerEntity player, BlockPos blockPos, int additionalHeadClearance) {
+        boolean hasSpaceForPlayerToStand = hasSpaceForPlayerToStandAtBlockPos(world, player, blockPos);
+        for (int i = 1; i <= additionalHeadClearance; i++) {
+            hasSpaceForPlayerToStand &= canPathfindThrough(world, blockPos.up().up(i));
+        }
+
+        return hasSpaceForPlayerToStand;
     }
 
     public static boolean isNotLava(ClientWorld world, BlockPos pos) {
@@ -175,13 +221,16 @@ public class NavigationUtility {
             dirFacingPos = from.getY() < to.getY() ? Direction.UP : Direction.DOWN;
         } else {
             // If the player is not directly above or below the block, we want to look towards the block face that is closest to the player (and is not blocked by a block).
-            Direction dirFacingX = Direction.fromVector((int) Math.ceil(vi.getX()), 0, 0);
+            int x = (int) Math.round(vi.getX());
+            Direction dirFacingX = Direction.fromVector(x, 0, 0);
             boolean isXFaceAir = dirFacingX != null && world.isAir(toBlockPos.offset(dirFacingX.getOpposite()));
 
-            Direction dirFacingZ = Direction.fromVector(0, 0, (int) Math.ceil(vi.getZ()));
+            int z = (int) Math.round(vi.getZ());
+            Direction dirFacingZ = Direction.fromVector(0, 0, z);
             boolean isZFaceAir = dirFacingZ != null && world.isAir(toBlockPos.offset(dirFacingZ.getOpposite()));
 
-            Direction dirFacingY = Direction.fromVector(0, (int) Math.ceil(vi.getY()), 0);
+            int y = (int) Math.round(vi.getY());
+            Direction dirFacingY = Direction.fromVector(0, y, 0);
             boolean isYFaceAir = dirFacingY != null && world.isAir(toBlockPos.offset(dirFacingY.getOpposite()));
 
             // If both faces are air, we want to look towards the face that is closest to the player.
