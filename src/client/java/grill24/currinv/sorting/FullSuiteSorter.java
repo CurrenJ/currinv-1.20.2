@@ -73,7 +73,7 @@ public class FullSuiteSorter {
     public boolean isDebugVerbose;
 
     public enum DebugRays {OFF, SUCCESS, FAIL, ALL}
-    @CommandOption(value = "debugRays", parentKey = "debug")
+    @CommandOption(value = "debugRays")
     public DebugRays debugRays = DebugRays.OFF;
 
 

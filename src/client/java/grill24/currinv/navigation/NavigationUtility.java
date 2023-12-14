@@ -11,15 +11,18 @@ import net.minecraft.client.world.ClientWorld;
 import net.minecraft.entity.ai.pathing.NavigationType;
 import net.minecraft.registry.tag.BlockTags;
 import net.minecraft.registry.tag.FluidTags;
+import net.minecraft.util.hit.BlockHitResult;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.Direction;
 import net.minecraft.util.math.Vec3d;
 import net.minecraft.util.math.Vec3i;
+import net.minecraft.util.shape.VoxelShape;
 import org.joml.Vector2d;
 
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
+import java.util.Random;
 
 public class NavigationUtility {
     public static boolean canPlayerStandOnBlockBelow(ClientWorld world, ClientPlayerEntity player, BlockPos pos) {
@@ -77,43 +80,62 @@ public class NavigationUtility {
         // This eases the burden on the raycast. If the player is looking at a blockPos that is blocked by the three blocks immediately adjacent to it, the player cannot see the blockPos.
         // EDIT: Is this still worth it? The random offset handles these cases nicely. But this still is probably more efficient.
         List<Direction> directions = getRelativeDirections(see, from);
-        if (directions.size() == 3) {
-            boolean blockedByImmediatelyAdjacentBlocks = true;
-            for (Direction direction : directions) {
-                if (world.isAir(see.offset(direction)) || world.getBlockState(see.offset(direction)).getCollisionShape(world, see.offset(direction)).isEmpty()) {
-                    blockedByImmediatelyAdjacentBlocks = false;
-                }
-            }
-            if (blockedByImmediatelyAdjacentBlocks)
-                return false;
+        boolean blockedByImmediatelyAdjacentBlocks = true;
+        List<BlockPos> adjacentBlocksToCheck = new ArrayList<>();
+        for (Direction direction : directions) {
+            adjacentBlocksToCheck.add(see.offset(direction));
         }
 
-        // This offset helps us avoid hitting the vertices of block collision boxes
-        Vec3d offsetVec = new Vec3d(0.15, 0, 0);
+        for (BlockPos blockPos : adjacentBlocksToCheck) {
+            if (world.isAir(blockPos) || world.getBlockState(blockPos).getCollisionShape(world, blockPos).isEmpty()) {
+                blockedByImmediatelyAdjacentBlocks = false;
+            }
+        }
+        if (blockedByImmediatelyAdjacentBlocks)
+            return false;
+
+        if(from.equals(player.getBlockPos()))
+            System.out.println("ASDSA");
+
+        // This offset helps us avoid hitting the vertices of block collision boxes.
+        // IE when three blocks meet at one corner, how do we stop the raycast from perfectly passing through that corner
+        double offsetAmount = 0.1;
+        Random random = new Random(from.hashCode());
+        Vec3d offsetVec = new Vec3d(random.nextDouble(-offsetAmount, offsetAmount), random.nextDouble(-offsetAmount, offsetAmount), random.nextDouble(-offsetAmount, offsetAmount));
 
         // Check if there are any blocks between player and blockPos that would block the player's line of sight.
         Vec3d fromVec = from.toCenterPos().subtract(0, 0.5, 0).add(0, player.getEyeHeight(player.getPose()), 0).add(offsetVec);
-        Vec3d seeVec = getBlockFaceToLookTowards(world, BlockPos.ofFloored(fromVec).toCenterPos(), see.toCenterPos()).add(offsetVec);
+        Vec3d seeVec = getBlockFaceToLookTowards(world, BlockPos.ofFloored(fromVec).toCenterPos(), see.toCenterPos());
+
 
         // Get the vector from the player to the blockPos.
         Vec3d rayVec = seeVec.subtract(fromVec);
         double reachDistance = interactionManager.getReachDistance();
 
+
+        List<BlockPos> blockPosAlongRay = new ArrayList<>();
         //Iterate through each block along the vector from the player to the blockPos.
-        double stepSize = 0.025;
+        double stepSize = 0.05;
         for (double i = 0; i < reachDistance + stepSize; i += stepSize) {
             Vec3d blockPosAlongVector = fromVec.add(rayVec.normalize().multiply(i));
             BlockPos blockPosAlongVectorBlockPos = new BlockPos((int) Math.floor(blockPosAlongVector.getX()), (int) Math.floor(blockPosAlongVector.getY()), (int) Math.floor(blockPosAlongVector.getZ()));
+            if(blockPosAlongRay.isEmpty() || blockPosAlongRay.get(blockPosAlongRay.size()-1) != blockPosAlongVectorBlockPos)
+                blockPosAlongRay.add(blockPosAlongVectorBlockPos);
+        }
 
-            if (blockPosAlongVectorBlockPos.equals(see)) {
+        // Check each block pos along raycast to see if we hit it's collision shape
+        for(BlockPos blockPos : blockPosAlongRay)
+        {
+            if (blockPos.equals(see)) {
                 if(CurrInvClient.fullSuiteSorter.debugRays == FullSuiteSorter.DebugRays.ALL || CurrInvClient.fullSuiteSorter.debugRays == FullSuiteSorter.DebugRays.SUCCESS)
                     CurrInvClient.currInvDebugRenderer.addLine(fromVec, seeVec, 10000, CurrInvDebugRenderer.GREEN);
 
                 return true;
             }
 
-            // If the blockPos along the vector is not air, the player cannot see the blockPos.
-            if (!world.getBlockState(blockPosAlongVectorBlockPos).isAir() && !( world.getBlockState(blockPosAlongVectorBlockPos).getCollisionShape(world, blockPosAlongVectorBlockPos).isEmpty())) {
+            VoxelShape voxelShape = world.getBlockState(blockPos).getCollisionShape(world, blockPos);
+            BlockHitResult blockHitResult = voxelShape.raycast(fromVec, seeVec, blockPos);
+            if(!voxelShape.isEmpty() || blockHitResult != null) {
                 if(CurrInvClient.fullSuiteSorter.debugRays == FullSuiteSorter.DebugRays.ALL || CurrInvClient.fullSuiteSorter.debugRays == FullSuiteSorter.DebugRays.FAIL)
                     CurrInvClient.currInvDebugRenderer.addLine(fromVec, seeVec, 10000, CurrInvDebugRenderer.RED);
 

@@ -27,7 +27,7 @@ public class CurrInvDebugRenderer implements DebugRenderer.Renderer{
     public static final int GREEN = MathHelper.packRgb(0, 1, 0);
     public static final int BLUE = MathHelper.packRgb(0, 0, 1);
 
-    @CommandOption("lineSegmentRenderer")
+    @CommandOption("rayRenderer")
     public boolean isEnabled = true;
 
     @Override
