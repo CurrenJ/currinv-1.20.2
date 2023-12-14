@@ -95,7 +95,7 @@ public class ConsolidateAndSortMode implements IFullSuiteSorterMode {
         Item currentItem = instructions.get(CurrInvClient.fullSuiteSorter.containerIndex).item;
         for (int i = 0; i < instructions.size(); i++) {
             Instruction instruction = instructions.get(i);
-            if(instruction.item.equals(currentItem)) {
+            if (instruction.item.equals(currentItem)) {
                 if (instruction.state == State.Consolidate && i >= CurrInvClient.fullSuiteSorter.containerIndex) {
                     nextConsolidationInstructionIndex = i;
                     break;
@@ -143,7 +143,7 @@ public class ConsolidateAndSortMode implements IFullSuiteSorterMode {
                 List<ItemQuantityAndSlots> containersByQuantity = new ArrayList<>(containers);
                 containersByQuantity.sort(Comparator.naturalOrder());
 
-                if(containers.size() >= 2) {
+                if (containers.size() >= 2) {
                     for (int i = 0; i < containers.size(); i++) {
                         BlockPos pos = containersByQuantity.get(i).slotIds.keySet().iterator().next();
                         if (i < containers.size() - 1) {

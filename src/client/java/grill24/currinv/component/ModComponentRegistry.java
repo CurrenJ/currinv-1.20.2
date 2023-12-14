@@ -1,4 +1,4 @@
-package grill24.currinv;
+package grill24.currinv.component;
 
 import com.mojang.brigadier.arguments.ArgumentType;
 import com.mojang.brigadier.arguments.BoolArgumentType;
@@ -10,7 +10,6 @@ import com.mojang.brigadier.exceptions.CommandSyntaxException;
 import com.mojang.brigadier.suggestion.SuggestionProvider;
 import com.mojang.brigadier.suggestion.Suggestions;
 import com.mojang.brigadier.suggestion.SuggestionsBuilder;
-import grill24.currinv.component.*;
 import grill24.currinv.component.accessor.GetFieldValue;
 import grill24.currinv.component.accessor.GetNewFieldValue;
 import grill24.currinv.component.accessor.SetNewFieldValue;
@@ -59,14 +58,12 @@ public class ModComponentRegistry {
 
     private int tickCounter;
 
-    public static class CommandTreeNode
-    {
+    public static class CommandTreeNode {
         public String literal;
         public LiteralArgumentBuilder<FabricClientCommandSource> command;
         public HashMap<String, CommandTreeNode> children;
 
-        public CommandTreeNode(String literal, LiteralArgumentBuilder<FabricClientCommandSource>command)
-        {
+        public CommandTreeNode(String literal, LiteralArgumentBuilder<FabricClientCommandSource> command) {
             this.literal = literal;
             this.command = command;
             this.children = new HashMap<>();
@@ -115,7 +112,7 @@ public class ModComponentRegistry {
 
     private void registerComponentCommands() {
         ClientCommandRegistrationCallback.EVENT.register((dispatcher, registryAccess) -> {
-            if(commandTreeRoot == null && commandRootComponent != null) {
+            if (commandTreeRoot == null && commandRootComponent != null) {
                 LiteralArgumentBuilder<FabricClientCommandSource> rootCommand = buildCommandsFromAnnotations(commandRootComponent, registryAccess, commandTreeRoot);
                 commandTreeRoot = new CommandTreeNode(ComponentUtility.getCommandKey(commandRootComponent.clazz), rootCommand);
             }
@@ -126,7 +123,8 @@ public class ModComponentRegistry {
 
                     commandTreeRoot.command.then(command);
 
-                    String commandKey = ComponentUtility.getCommandKey(component.clazz);;
+                    String commandKey = ComponentUtility.getCommandKey(component.clazz);
+                    ;
                     commandTreeRoot.children.put(commandKey, new CommandTreeNode(commandKey, command));
                 }
             }
@@ -240,7 +238,7 @@ public class ModComponentRegistry {
     }
 
     private static void attachSubCommandToParentCommand(CommandTreeNode commandRoot, String parentOverrideKey, LiteralArgumentBuilder<FabricClientCommandSource> defaultParentCommand, LiteralArgumentBuilder<FabricClientCommandSource> subCommand) {
-        if(parentOverrideKey.isEmpty())
+        if (parentOverrideKey.isEmpty())
             defaultParentCommand.then(subCommand);
         else {
             LiteralArgumentBuilder<FabricClientCommandSource> parentCommand = ComponentUtility.getCommandOrElse(commandRoot, parentOverrideKey, (key) -> ClientCommandManager.literal(parentOverrideKey));

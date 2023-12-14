@@ -7,7 +7,10 @@ import grill24.currinv.debug.DebugParticles;
 import grill24.currinv.debug.DebugUtility;
 import grill24.currinv.navigation.NavigationUtility;
 import net.fabricmc.fabric.api.client.command.v2.FabricClientCommandSource;
-import net.minecraft.block.*;
+import net.minecraft.block.Block;
+import net.minecraft.block.BlockState;
+import net.minecraft.block.DoubleBlockProperties;
+import net.minecraft.block.WallSignBlock;
 import net.minecraft.block.entity.BlockEntity;
 import net.minecraft.block.entity.LockableContainerBlockEntity;
 import net.minecraft.block.entity.LootableContainerBlockEntity;
@@ -73,6 +76,7 @@ public class FullSuiteSorter {
     public boolean isDebugVerbose;
 
     public enum DebugRays {OFF, SUCCESS, FAIL, ALL}
+
     @CommandOption(value = "debugRays")
     public DebugRays debugRays = DebugRays.OFF;
 
@@ -292,8 +296,7 @@ public class FullSuiteSorter {
                 // copied from AbstractDecorationEntity#canStayAttached
                 BlockPos attachedPos = itemFrameEntity.getDecorationBlockPos().offset(itemFrameEntity.getHorizontalFacing().getOpposite());
                 client.crosshairTarget = new BlockHitResult(client.crosshairTarget.getPos(), itemFrameEntity.getHorizontalFacing(), attachedPos, false);
-            }
-            else if (client.crosshairTarget.getType() == HitResult.Type.BLOCK) {
+            } else if (client.crosshairTarget.getType() == HitResult.Type.BLOCK) {
                 BlockPos blockPos = ((BlockHitResult) client.crosshairTarget).getBlockPos();
                 BlockState blockState = client.world.getBlockState(blockPos);
                 Block block = blockState.getBlock();
@@ -316,7 +319,7 @@ public class FullSuiteSorter {
                     }
 
                     // Click through sign
-                    if(attachedPos.equals(container.getPos())) {
+                    if (attachedPos.equals(container.getPos())) {
                         client.crosshairTarget = new BlockHitResult(client.crosshairTarget.getPos(), blockState.get(WallSignBlock.FACING), attachedPos, false);
                         state = State.OPEN_CONTAINER;
                         openContainer(client);

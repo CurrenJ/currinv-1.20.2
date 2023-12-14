@@ -25,9 +25,8 @@ public class DebugUtility {
     public static void drawPathLines(NavigationData navigationData) {
         List<BlockPos> pathAheadOfPlayer = getPathAheadOfPlayer(navigationData);
 
-        for(int i = 1; i < pathAheadOfPlayer.size(); i++)
-        {
-            CurrInvClient.currInvDebugRenderer.addLine(pathAheadOfPlayer.get(i-1).toCenterPos(), pathAheadOfPlayer.get(i).toCenterPos(), 1000, CurrInvDebugRenderer.GREEN);
+        for (int i = 1; i < pathAheadOfPlayer.size(); i++) {
+            CurrInvClient.currInvDebugRenderer.addLine(pathAheadOfPlayer.get(i - 1).toCenterPos(), pathAheadOfPlayer.get(i).toCenterPos(), 1000, CurrInvDebugRenderer.GREEN);
         }
     }
 

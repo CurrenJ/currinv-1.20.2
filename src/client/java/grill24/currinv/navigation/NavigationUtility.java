@@ -3,7 +3,6 @@ package grill24.currinv.navigation;
 import grill24.currinv.CurrInvClient;
 import grill24.currinv.debug.CurrInvDebugRenderer;
 import grill24.currinv.sorting.FullSuiteSorter;
-import net.fabricmc.loader.impl.lib.sat4j.core.Vec;
 import net.minecraft.block.*;
 import net.minecraft.client.network.ClientPlayerEntity;
 import net.minecraft.client.network.ClientPlayerInteractionManager;
@@ -94,7 +93,7 @@ public class NavigationUtility {
         if (blockedByImmediatelyAdjacentBlocks)
             return false;
 
-        if(from.equals(player.getBlockPos()))
+        if (from.equals(player.getBlockPos()))
             System.out.println("ASDSA");
 
         // This offset helps us avoid hitting the vertices of block collision boxes.
@@ -120,15 +119,14 @@ public class NavigationUtility {
         for (double i = 0; i < reachDistance + stepSize; i += stepSize) {
             Vec3d blockPosAlongVector = fromVec.add(rayVec.normalize().multiply(i));
             BlockPos blockPosAlongVectorBlockPos = new BlockPos((int) Math.floor(blockPosAlongVector.getX()), (int) Math.floor(blockPosAlongVector.getY()), (int) Math.floor(blockPosAlongVector.getZ()));
-            if(blockPosAlongRay.isEmpty() || blockPosAlongRay.get(blockPosAlongRay.size()-1) != blockPosAlongVectorBlockPos)
+            if (blockPosAlongRay.isEmpty() || blockPosAlongRay.get(blockPosAlongRay.size() - 1) != blockPosAlongVectorBlockPos)
                 blockPosAlongRay.add(blockPosAlongVectorBlockPos);
         }
 
         // Check each block pos along raycast to see if we hit it's collision shape
-        for(BlockPos blockPos : blockPosAlongRay)
-        {
+        for (BlockPos blockPos : blockPosAlongRay) {
             if (blockPos.equals(see)) {
-                if(CurrInvClient.fullSuiteSorter.debugRays == FullSuiteSorter.DebugRays.ALL || CurrInvClient.fullSuiteSorter.debugRays == FullSuiteSorter.DebugRays.SUCCESS)
+                if (CurrInvClient.fullSuiteSorter.debugRays == FullSuiteSorter.DebugRays.ALL || CurrInvClient.fullSuiteSorter.debugRays == FullSuiteSorter.DebugRays.SUCCESS)
                     CurrInvClient.currInvDebugRenderer.addLine(fromVec, seeVec, 10000, CurrInvDebugRenderer.GREEN);
 
                 return true;
@@ -136,14 +134,14 @@ public class NavigationUtility {
 
             VoxelShape voxelShape = world.getBlockState(blockPos).getCollisionShape(world, blockPos);
             BlockHitResult blockHitResult = voxelShape.raycast(fromVec, seeVec, blockPos);
-            if(!voxelShape.isEmpty() || blockHitResult != null) {
-                if(CurrInvClient.fullSuiteSorter.debugRays == FullSuiteSorter.DebugRays.ALL || CurrInvClient.fullSuiteSorter.debugRays == FullSuiteSorter.DebugRays.FAIL)
+            if (!voxelShape.isEmpty() || blockHitResult != null) {
+                if (CurrInvClient.fullSuiteSorter.debugRays == FullSuiteSorter.DebugRays.ALL || CurrInvClient.fullSuiteSorter.debugRays == FullSuiteSorter.DebugRays.FAIL)
                     CurrInvClient.currInvDebugRenderer.addLine(fromVec, seeVec, 10000, CurrInvDebugRenderer.RED);
 
                 return false;
             }
         }
-        if(CurrInvClient.fullSuiteSorter.debugRays == FullSuiteSorter.DebugRays.ALL || CurrInvClient.fullSuiteSorter.debugRays == FullSuiteSorter.DebugRays.FAIL)
+        if (CurrInvClient.fullSuiteSorter.debugRays == FullSuiteSorter.DebugRays.ALL || CurrInvClient.fullSuiteSorter.debugRays == FullSuiteSorter.DebugRays.FAIL)
             CurrInvClient.currInvDebugRenderer.addLine(fromVec, seeVec, 10000, CurrInvDebugRenderer.GREEN);
 
         return false;

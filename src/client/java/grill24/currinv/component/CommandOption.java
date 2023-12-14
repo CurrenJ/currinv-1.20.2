@@ -10,7 +10,7 @@ import java.lang.annotation.Target;
 public @interface CommandOption {
     /**
      * The key that will be used in the created command. If not specified, the name of the field will be used.
-      */
+     */
     String value() default "";
 
     /**

@@ -214,7 +214,7 @@ public class PlayerNavigator implements IClientPlayerController {
     // ----- Debug -----
     @ClientTick(20)
     public void updateDebugParticles(MinecraftClient client) {
-        if(debugLinesEnabled)
+        if (debugLinesEnabled)
             DebugUtility.drawPathLines(navigationData);
 
         if (debugParticlesEnabled)

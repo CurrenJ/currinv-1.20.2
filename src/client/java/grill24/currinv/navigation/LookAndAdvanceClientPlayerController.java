@@ -1,7 +1,6 @@
 package grill24.currinv.navigation;
 
 import grill24.currinv.CurrInvClient;
-import grill24.currinv.debug.DebugUtility;
 import net.minecraft.block.Blocks;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.network.ClientPlayerEntity;

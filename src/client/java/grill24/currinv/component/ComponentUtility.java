@@ -1,7 +1,6 @@
 package grill24.currinv.component;
 
 import com.mojang.brigadier.builder.LiteralArgumentBuilder;
-import grill24.currinv.ModComponentRegistry;
 import net.fabricmc.fabric.api.client.command.v2.FabricClientCommandSource;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.gui.screen.Screen;
@@ -133,7 +132,7 @@ public class ComponentUtility {
     }
 
     public static String getCommandKey(Class<?> clazz) {
-        if(hasCustomClassAnnotation(clazz, Command.class)) {
+        if (hasCustomClassAnnotation(clazz, Command.class)) {
             Command annotation = clazz.getAnnotation(Command.class);
             return annotation.value().isEmpty() ? ComponentUtility.convertDeclarationToCamel(clazz.getSimpleName()) : annotation.value();
         }
@@ -142,11 +141,11 @@ public class ComponentUtility {
 
     public static LiteralArgumentBuilder<FabricClientCommandSource> getCommandOrElse(ModComponentRegistry.CommandTreeNode commandTreeRoot, String commandKey, LiteralArgumentBuilderSupplier value) {
         LiteralArgumentBuilder<FabricClientCommandSource> command;
-        if(commandTreeRoot != null && commandTreeRoot.getChildNode(commandKey).isPresent())
+        if (commandTreeRoot != null && commandTreeRoot.getChildNode(commandKey).isPresent())
             return commandTreeRoot.getChildNode(commandKey).get().command;
         else {
             LiteralArgumentBuilder<FabricClientCommandSource> newCommand = value.run(commandKey);
-            if(commandTreeRoot != null) {
+            if (commandTreeRoot != null) {
                 ModComponentRegistry.CommandTreeNode node = new ModComponentRegistry.CommandTreeNode(commandKey, newCommand);
                 commandTreeRoot.children.put(commandKey, node);
             }
