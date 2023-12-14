@@ -275,7 +275,7 @@ public class FullSuiteSorter {
         double angle = 2 * Math.PI * dt;
         lookRadius += dt * 0.25f;
 
-        if (client.player != null && container != null) {
+        if (client.player != null && container != null && lookRadius < 20) {
             float lerpFactor = 0.8f;
 
             Vector2d pitchAndYaw = NavigationUtility.getPitchAndYawToLookTowardsBlockFace(client.world, client.player, container.getPos());

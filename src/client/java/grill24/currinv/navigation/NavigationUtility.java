@@ -99,13 +99,14 @@ public class NavigationUtility {
 
         // This offset helps us avoid hitting the vertices of block collision boxes.
         // IE when three blocks meet at one corner, how do we stop the raycast from perfectly passing through that corner
-        double offsetAmount = 0.1;
+        double offsetAmountMax = 0.1;
+        double offsetAmountMin = 0.05;
         Random random = new Random(from.hashCode());
-        Vec3d offsetVec = new Vec3d(random.nextDouble(-offsetAmount, offsetAmount), random.nextDouble(-offsetAmount, offsetAmount), random.nextDouble(-offsetAmount, offsetAmount));
+        Vec3d offsetVec = new Vec3d(random.nextDouble(offsetAmountMin, offsetAmountMax) * (random.nextBoolean() ? 1 : -1), random.nextDouble(offsetAmountMin, offsetAmountMax) * (random.nextBoolean() ? 1 : -1), random.nextDouble(offsetAmountMin, offsetAmountMax) * (random.nextBoolean() ? 1 : -1));
 
         // Check if there are any blocks between player and blockPos that would block the player's line of sight.
         Vec3d fromVec = from.toCenterPos().subtract(0, 0.5, 0).add(0, player.getEyeHeight(player.getPose()), 0).add(offsetVec);
-        Vec3d seeVec = getBlockFaceToLookTowards(world, BlockPos.ofFloored(fromVec).toCenterPos(), see.toCenterPos());
+        Vec3d seeVec = getBlockFaceToLookTowards(world, BlockPos.ofFloored(fromVec).toCenterPos(), see.toCenterPos()).add(offsetVec);
 
 
         // Get the vector from the player to the blockPos.
@@ -153,9 +154,9 @@ public class NavigationUtility {
     }
 
     public static boolean hasSpaceForPlayerToStandAtBlockPos(ClientWorld world, ClientPlayerEntity player, BlockPos blockPos, int additionalHeadClearance) {
-        boolean hasSpaceForPlayerToStand = (canPathfindThrough(world, blockPos) || world.getBlockState(blockPos).getBlock() instanceof CarpetBlock) && canPathfindThrough(world, blockPos.up());
+        boolean hasSpaceForPlayerToStand = hasSpaceForPlayerToStandAtBlockPos(world, player, blockPos);
         for (int i = 1; i <= additionalHeadClearance; i++) {
-            hasSpaceForPlayerToStand &= canPathfindThrough(world, blockPos.up(i));
+            hasSpaceForPlayerToStand &= canPathfindThrough(world, blockPos.up().up(i));
         }
 
         return hasSpaceForPlayerToStand;
@@ -222,13 +223,16 @@ public class NavigationUtility {
             dirFacingPos = from.getY() < to.getY() ? Direction.UP : Direction.DOWN;
         } else {
             // If the player is not directly above or below the block, we want to look towards the block face that is closest to the player (and is not blocked by a block).
-            Direction dirFacingX = Direction.fromVector((int) Math.ceil(vi.getX()), 0, 0);
+            int x = (int) Math.round(vi.getX());
+            Direction dirFacingX = Direction.fromVector(x, 0, 0);
             boolean isXFaceAir = dirFacingX != null && world.isAir(toBlockPos.offset(dirFacingX.getOpposite()));
 
-            Direction dirFacingZ = Direction.fromVector(0, 0, (int) Math.ceil(vi.getZ()));
+            int z = (int) Math.round(vi.getZ());
+            Direction dirFacingZ = Direction.fromVector(0, 0, z);
             boolean isZFaceAir = dirFacingZ != null && world.isAir(toBlockPos.offset(dirFacingZ.getOpposite()));
 
-            Direction dirFacingY = Direction.fromVector(0, (int) Math.ceil(vi.getY()), 0);
+            int y = (int) Math.round(vi.getY());
+            Direction dirFacingY = Direction.fromVector(0, y, 0);
             boolean isYFaceAir = dirFacingY != null && world.isAir(toBlockPos.offset(dirFacingY.getOpposite()));
 
             // If both faces are air, we want to look towards the face that is closest to the player.

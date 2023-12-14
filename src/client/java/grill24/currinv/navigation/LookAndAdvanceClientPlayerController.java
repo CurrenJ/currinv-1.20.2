@@ -1,6 +1,7 @@
 package grill24.currinv.navigation;
 
 import grill24.currinv.CurrInvClient;
+import grill24.currinv.debug.DebugUtility;
 import net.minecraft.block.Blocks;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.network.ClientPlayerEntity;
@@ -71,18 +72,22 @@ public class LookAndAdvanceClientPlayerController extends ClientPlayerController
 
         boolean isDiagonal = !NavigationUtility.isDirectlyAdjacent(currentNode, nextNode);
         if (isDiagonal) {
+            BlockPos diagonal1 = new BlockPos(currentNode.getX(), currentNode.getY(), nextNode.getZ());
+            BlockPos diagonal2 = new BlockPos(nextNode.getX(), currentNode.getY(), currentNode.getZ());
             if (!nextNodeIsAbove) {
                 // Logic for jumping over diagonal waist-high "hurdles"
-                BlockPos diagonal1 = new BlockPos(currentNode.getX(), currentNode.getY(), nextNode.getZ());
-                BlockPos diagonal2 = new BlockPos(nextNode.getX(), nextNode.getY(), currentNode.getZ());
                 nextNodeIsAbove = !NavigationUtility.canPathfindThrough(world, diagonal1) && !NavigationUtility.canPathfindThrough(world, diagonal2);
             } else {
                 // Weird logic for specific cave escaping
-                boolean isPitfall = NavigationUtility.hasSpaceForPlayerToStandAtBlockPos(world, player, new BlockPos(currentNode.getX(), currentNode.down().getY(), nextNode.getZ())) ||
-                        NavigationUtility.hasSpaceForPlayerToStandAtBlockPos(world, player, new BlockPos(nextNode.getX(), currentNode.down().getY(), currentNode.getZ()));
+                boolean isPitfall = NavigationUtility.hasSpaceForPlayerToStandAtBlockPos(world, player, diagonal1, 1) ||
+                        NavigationUtility.hasSpaceForPlayerToStandAtBlockPos(world, player, diagonal2, 1);
                 if (isPitfall) {
                     boolean diagonalPitfallShouldJump = !player.getBlockPos().equals(navigationData.getCurrentNode());
                     nextNodeIsAbove = diagonalPitfallShouldJump;
+                } else {
+                    boolean hasHeadroom = world.getBlockState(player.getBlockPos().up()).getCollisionShape(world, player.getBlockPos().up()).isEmpty()
+                            && currentNode.toCenterPos().subtract(0, 0.5, 0).distanceTo(player.getPos()) < 0.25f;
+                    nextNodeIsAbove = hasHeadroom;
                 }
             }
         }
