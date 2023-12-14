@@ -72,6 +72,11 @@ public class FullSuiteSorter {
     @CommandOption("debugVerbose")
     public boolean isDebugVerbose;
 
+    public enum DebugRays {OFF, SUCCESS, FAIL, ALL}
+    @CommandOption(value = "debugRays", parentKey = "debug")
+    public DebugRays debugRays = DebugRays.OFF;
+
+
     public FullSuiteSorter() {
         state = State.IDLE;
         containersToVisit = new ArrayList<>();

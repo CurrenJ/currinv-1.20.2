@@ -14,7 +14,6 @@ import grill24.currinv.component.*;
 import grill24.currinv.component.accessor.GetFieldValue;
 import grill24.currinv.component.accessor.GetNewFieldValue;
 import grill24.currinv.component.accessor.SetNewFieldValue;
-import grill24.currinv.debug.CurrInvDebugRenderer;
 import grill24.currinv.debug.DebugParticles;
 import grill24.currinv.debug.DebugUtility;
 import net.fabricmc.fabric.api.client.command.v2.ClientCommandManager;
@@ -27,13 +26,17 @@ import net.minecraft.client.gui.screen.Screen;
 import net.minecraft.client.gui.screen.ingame.HandledScreen;
 import net.minecraft.command.CommandRegistryAccess;
 import net.minecraft.command.argument.ItemStackArgumentType;
+import oshi.util.tuples.Pair;
 
+import javax.swing.text.html.Option;
 import java.lang.reflect.Field;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.lang.reflect.Parameter;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 
 public class CurrInvComponentRegistry {
@@ -53,7 +56,25 @@ public class CurrInvComponentRegistry {
     private static final List<ScreenMethodDto> SCREEN_TICK_METHODS;
     private static final List<ScreenMethodDto> SCREEN_INIT_METHODS;
 
-    private static LiteralArgumentBuilder<FabricClientCommandSource> commandRoot;
+    private static CommandTreeNode commandTreeRoot;
+
+    public static class CommandTreeNode
+    {
+        public String literal;
+        public LiteralArgumentBuilder<FabricClientCommandSource> command;
+        public HashMap<String, CommandTreeNode> children;
+
+        public CommandTreeNode(String literal, LiteralArgumentBuilder<FabricClientCommandSource>command)
+        {
+            this.literal = literal;
+            this.command = command;
+            this.children = new HashMap<>();
+        }
+
+        public Optional<CommandTreeNode> getChildNode(String literal) {
+            return children.containsKey(literal) ? Optional.of(children.get(literal)) : Optional.empty();
+        }
+    }
 
     private static int tickCounter = 0;
 
@@ -87,10 +108,19 @@ public class CurrInvComponentRegistry {
 
     public static void registerComponentCommands() {
         ClientCommandRegistrationCallback.EVENT.register((dispatcher, registryAccess) -> {
-            commandRoot = buildCommandsFromAnnotations(new ComponentDto(null, CurrInvClient.class), registryAccess);
+            LiteralArgumentBuilderSupplier commandRootSupplier = (key) -> buildCommandsFromAnnotations(new ComponentDto(null, CurrInvClient.class), registryAccess, commandTreeRoot);
+            LiteralArgumentBuilder<FabricClientCommandSource> commandRoot = ComponentUtility.getCommandOrElse(commandTreeRoot, "currInv", commandRootSupplier);
+            commandTreeRoot = new CommandTreeNode("currInv", commandRoot);
+
             for (ComponentDto component : CurrInvComponentRegistry.COMPONENTS) {
-                if (ComponentUtility.hasCustomClassAnnotation(component.clazz, Command.class))
-                    commandRoot = commandRoot.then(buildCommandsFromAnnotations(component, registryAccess));
+                if (ComponentUtility.hasCustomClassAnnotation(component.clazz, Command.class)) {
+                    LiteralArgumentBuilder<FabricClientCommandSource> command = buildCommandsFromAnnotations(component, registryAccess, commandTreeRoot);
+
+                    commandTreeRoot.command.then(command);
+
+                    String commandKey = ComponentUtility.getCommandKey(component.clazz);;
+                    commandTreeRoot.children.put(commandKey, new CommandTreeNode(commandKey, command));
+                }
             }
             dispatcher.register(commandRoot);
         });
@@ -179,7 +209,7 @@ public class CurrInvComponentRegistry {
     /**
      * Build command from an object component whose class has the {@link Command} annotation.
      */
-    private static LiteralArgumentBuilder<FabricClientCommandSource> buildCommandsFromAnnotations(ComponentDto component, CommandRegistryAccess commandRegistryAccess) {
+    private static LiteralArgumentBuilder<FabricClientCommandSource> buildCommandsFromAnnotations(ComponentDto component, CommandRegistryAccess commandRegistryAccess, CommandTreeNode commandRoot) {
         MinecraftClient client = MinecraftClient.getInstance();
 
         if (client != null) {
@@ -187,7 +217,7 @@ public class CurrInvComponentRegistry {
 
             if (ComponentUtility.hasCustomClassAnnotation(clazz, Command.class)) {
                 Command annotation = clazz.getAnnotation(Command.class);
-                String commandKey = annotation.value().isEmpty() ? ComponentUtility.convertDeclarationToCamel(clazz.getSimpleName()) : annotation.value();
+                String commandKey = ComponentUtility.getCommandKey(component.clazz);
 
                 com.mojang.brigadier.Command<FabricClientCommandSource> printInstance = (context) -> {
                     if (component.instance != null)
@@ -197,11 +227,26 @@ public class CurrInvComponentRegistry {
                     return 1;
                 };
 
-                LiteralArgumentBuilder<FabricClientCommandSource> command = ClientCommandManager.literal(commandKey).executes(printInstance);
 
 
-                for (LiteralArgumentBuilder<FabricClientCommandSource> subCommand : buildCommandsFromFields(component)) {
-                    command = command.then(subCommand);
+                LiteralArgumentBuilder<FabricClientCommandSource> command = ComponentUtility.getCommandOrElse(commandRoot, commandKey, (key) -> ClientCommandManager.literal(commandKey)).executes(printInstance);
+//                if(commandRoot != null && commandRoot.getChildNode(commandKey).isPresent())
+//                    command = commandRoot.getChildNode(commandKey).get().command;
+//                else
+//                    command = ClientCommandManager.literal(commandKey).executes(printInstance);
+
+
+
+                for (Pair<CommandOption, LiteralArgumentBuilder<FabricClientCommandSource>> subCommandData : buildCommandsFromFields(component)) {
+                    CommandOption optionAnnotation = subCommandData.getA();
+                    LiteralArgumentBuilder<FabricClientCommandSource> subCommand = subCommandData.getB();
+
+                    if(optionAnnotation.parentKey().isEmpty())
+                        command = command.then(subCommand);
+                    else {
+                        LiteralArgumentBuilder<FabricClientCommandSource> parentCommand = ComponentUtility.getCommandOrElse(commandRoot, optionAnnotation.parentKey(), (key) -> ClientCommandManager.literal(optionAnnotation.parentKey()));
+                        parentCommand.then(subCommand);
+                    }
                 }
 
                 for (LiteralArgumentBuilder<FabricClientCommandSource> subCommand : buildCommandsFromMethods(component, commandRegistryAccess)) {
@@ -217,10 +262,10 @@ public class CurrInvComponentRegistry {
     /**
      * Build commands from fields with the {@link CommandOption} in an object's class.
      */
-    private static List<LiteralArgumentBuilder<FabricClientCommandSource>> buildCommandsFromFields(ComponentDto component) {
+    private static List<Pair<CommandOption, LiteralArgumentBuilder<FabricClientCommandSource>>> buildCommandsFromFields(ComponentDto component) {
         Class<?> clazz = component.clazz;
 
-        List<LiteralArgumentBuilder<FabricClientCommandSource>> commands = new ArrayList<>();
+        List<Pair<CommandOption, LiteralArgumentBuilder<FabricClientCommandSource>>> commands = new ArrayList<>();
         for (Field field : ComponentUtility.getCommandOptionFields(clazz)) {
             Class<?> fieldClass = field.getType();
             CommandOption optionAnnotation = field.getAnnotation(CommandOption.class);
@@ -321,6 +366,7 @@ public class CurrInvComponentRegistry {
             subCommand = subCommand.executes(noOptionProvidedFunc);
 
             if (argumentType != null && getNewFieldValue != null && setNewFieldValue != null) {
+
                 RequiredArgumentBuilder<FabricClientCommandSource, ?> argument = ClientCommandManager.argument(optionKey, argumentType);
                 if (suggestionProvider != null)
                     argument = argument.suggests(suggestionProvider);
@@ -332,7 +378,7 @@ public class CurrInvComponentRegistry {
                 subCommand.then(argument);
             }
 
-            commands.add(subCommand);
+            commands.add(new Pair<>(optionAnnotation, subCommand));
         }
         return commands;
     }

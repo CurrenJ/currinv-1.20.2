@@ -18,7 +18,7 @@ import java.util.HashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
 
-@Command("debugParticles")
+@Command("debug")
 public class DebugParticles {
 
     @CommandOption("allParticlesEnabled")

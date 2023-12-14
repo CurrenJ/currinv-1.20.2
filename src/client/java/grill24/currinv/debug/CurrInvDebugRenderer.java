@@ -18,7 +18,7 @@ import javax.sound.sampled.Line;
 import java.util.ArrayList;
 import java.util.List;
 
-@Command("debugRenderer")
+@Command("debug")
 public class CurrInvDebugRenderer implements DebugRenderer.Renderer{
     private record LineSegment(Vec3d a, Vec3d b, long expiryTime, int rgb) {}
 
@@ -28,7 +28,7 @@ public class CurrInvDebugRenderer implements DebugRenderer.Renderer{
     public static final int BLUE = MathHelper.packRgb(0, 0, 1);
 
     @CommandOption("lineSegmentRenderer")
-    public boolean isEnabled;
+    public boolean isEnabled = true;
 
     @Override
     public void render(MatrixStack matrices, VertexConsumerProvider vertexConsumers, double cameraX, double cameraY, double cameraZ) {

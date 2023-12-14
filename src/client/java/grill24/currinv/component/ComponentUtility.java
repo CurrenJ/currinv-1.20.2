@@ -1,5 +1,10 @@
 package grill24.currinv.component;
 
+import com.mojang.brigadier.builder.LiteralArgumentBuilder;
+import com.mojang.brigadier.exceptions.CommandSyntaxException;
+import grill24.currinv.CurrInvComponentRegistry;
+import net.fabricmc.fabric.api.client.command.v2.ClientCommandManager;
+import net.fabricmc.fabric.api.client.command.v2.FabricClientCommandSource;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.gui.screen.Screen;
 
@@ -8,6 +13,7 @@ import java.lang.reflect.Field;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.util.Arrays;
+import java.util.function.Supplier;
 
 public class ComponentUtility {
 
@@ -127,5 +133,27 @@ public class ComponentUtility {
         if (!correctParameters)
             System.out.println("WARNING: Incorrect parameters for client tick method: " + method.getName());
         return correctParameters;
+    }
+
+    public static String getCommandKey(Class<?> clazz) {
+        if(hasCustomClassAnnotation(clazz, Command.class)) {
+            Command annotation = clazz.getAnnotation(Command.class);
+            return annotation.value().isEmpty() ? ComponentUtility.convertDeclarationToCamel(clazz.getSimpleName()) : annotation.value();
+        }
+        return "";
+    }
+
+    public static LiteralArgumentBuilder<FabricClientCommandSource> getCommandOrElse(CurrInvComponentRegistry.CommandTreeNode commandTreeRoot, String commandKey, LiteralArgumentBuilderSupplier value) {
+        LiteralArgumentBuilder<FabricClientCommandSource> command;
+        if(commandTreeRoot != null && commandTreeRoot.getChildNode(commandKey).isPresent())
+            return commandTreeRoot.getChildNode(commandKey).get().command;
+        else {
+            LiteralArgumentBuilder<FabricClientCommandSource> newCommand = value.run(commandKey);
+            if(commandTreeRoot != null) {
+                CurrInvComponentRegistry.CommandTreeNode node = new CurrInvComponentRegistry.CommandTreeNode(commandKey, newCommand);
+                commandTreeRoot.children.put(commandKey, node);
+            }
+            return newCommand;
+        }
     }
 }
