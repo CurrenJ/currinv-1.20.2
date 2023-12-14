@@ -13,6 +13,7 @@ import java.util.*;
 
 public class ConsolidateAndSortMode implements IFullSuiteSorterMode {
 
+    private static final int RANGE = 16;
     private List<Instruction> instructions;
 
     private record Instruction(BlockPos pos, State state, Item item) {
@@ -128,7 +129,9 @@ public class ConsolidateAndSortMode implements IFullSuiteSorterMode {
                         if (containerStockData.isPresent()) {
                             Optional<ItemQuantityAndSlots> containerItemQuantityAndSlots = containerStockData.get().getItemStock(item);
                             if (containerItemQuantityAndSlots.isPresent() && !containerItemQuantityAndSlots.get().slotIds.isEmpty()) {
-                                if (!containerPositions.contains(SortingUtility.getOneBlockPosFromDoubleChests(client, blockPos))) {
+                                if (!containerPositions.contains(SortingUtility.getOneBlockPosFromDoubleChests(client, blockPos))
+                                        && blockPos.getManhattanDistance(client.player.getBlockPos()) < RANGE
+                                        && client.world.getBlockEntity(blockPos) instanceof LootableContainerBlockEntity) {
                                     containerPositions.add(blockPos);
                                     containers.add(containerItemQuantityAndSlots.get());
                                 }
@@ -140,14 +143,14 @@ public class ConsolidateAndSortMode implements IFullSuiteSorterMode {
                 List<ItemQuantityAndSlots> containersByQuantity = new ArrayList<>(containers);
                 containersByQuantity.sort(Comparator.naturalOrder());
 
-                for (int i = 0; i < containers.size(); i++) {
-                    if(containers.size() < 2)
-                        DebugUtility.print(client, "Suspicious... " + containers.size() + " containers for " + item.getName().getString());
-                    BlockPos pos = containersByQuantity.get(i).slotIds.keySet().iterator().next();
-                    if (i < containers.size() - 1) {
-                        instructions.add(new Instruction(pos, State.Gather, item));
-                    } else {
-                        instructions.add(new Instruction(pos, State.Consolidate, item));
+                if(containers.size() >= 2) {
+                    for (int i = 0; i < containers.size(); i++) {
+                        BlockPos pos = containersByQuantity.get(i).slotIds.keySet().iterator().next();
+                        if (i < containers.size() - 1) {
+                            instructions.add(new Instruction(pos, State.Gather, item));
+                        } else {
+                            instructions.add(new Instruction(pos, State.Consolidate, item));
+                        }
                     }
                 }
 

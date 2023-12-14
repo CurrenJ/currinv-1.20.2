@@ -20,9 +20,12 @@ import java.util.List;
 
 @Command("debugRenderer")
 public class CurrInvDebugRenderer implements DebugRenderer.Renderer{
-    private record LineSegment(Vec3d a, Vec3d b, long expiryTime) {}
+    private record LineSegment(Vec3d a, Vec3d b, long expiryTime, int rgb) {}
 
-    public List<LineSegment> lineSegments = new ArrayList<>();
+    private List<LineSegment> lineSegments = new ArrayList<>();
+    public static final int RED = MathHelper.packRgb(1, 0, 0);
+    public static final int GREEN = MathHelper.packRgb(0, 1, 0);
+    public static final int BLUE = MathHelper.packRgb(0, 0, 1);
 
     @CommandOption("lineSegmentRenderer")
     public boolean isEnabled;
@@ -36,15 +39,15 @@ public class CurrInvDebugRenderer implements DebugRenderer.Renderer{
         lineSegments.removeAll(expiredSegments);
     }
 
-    public void addLine(Vec3d a, Vec3d b, long durationMs) {
-        lineSegments.add(new LineSegment(a, b, System.currentTimeMillis() + durationMs));
+    public void addLine(Vec3d a, Vec3d b, long durationMs, int rgb) {
+        lineSegments.add(new LineSegment(a, b, System.currentTimeMillis() + durationMs, rgb));
     }
 
     private static void drawLines(MatrixStack matrices, VertexConsumerProvider vertexConsumers, double cameraX, double cameraY, double cameraZ, List<LineSegment> lineSegments) {
         for (int i = 0; i < lineSegments.size(); ++i) {
             VertexConsumer vertexConsumer = vertexConsumers.getBuffer(RenderLayer.getDebugLineStrip(6.0));
             LineSegment lineSegment = lineSegments.get(i);
-            int j = MathHelper.hsvToRgb((float)0, (float)0.9f, (float)0.9f);
+            int j = lineSegment.rgb;
             int k = j >> 16 & 0xFF;
             int l = j >> 8 & 0xFF;
             int m = j & 0xFF;

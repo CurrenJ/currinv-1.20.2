@@ -1,6 +1,8 @@
 package grill24.currinv.navigation;
 
 import grill24.currinv.CurrInvClient;
+import grill24.currinv.debug.CurrInvDebugRenderer;
+import grill24.currinv.sorting.FullSuiteSorter;
 import net.fabricmc.loader.impl.lib.sat4j.core.Vec;
 import net.minecraft.block.*;
 import net.minecraft.client.network.ClientPlayerEntity;
@@ -86,19 +88,16 @@ public class NavigationUtility {
                 return false;
         }
 
-
         // This offset helps us avoid hitting the vertices of block collision boxes
         Vec3d offsetVec = new Vec3d(0.15, 0, 0);
 
         // Check if there are any blocks between player and blockPos that would block the player's line of sight.
         Vec3d fromVec = from.toCenterPos().subtract(0, 0.5, 0).add(0, player.getEyeHeight(player.getPose()), 0).add(offsetVec);
-        Vec3d seeVec = getBlockFaceToLookTowards(world, from.toCenterPos(), see.toCenterPos()).add(offsetVec);
+        Vec3d seeVec = getBlockFaceToLookTowards(world, BlockPos.ofFloored(fromVec).toCenterPos(), see.toCenterPos()).add(offsetVec);
 
         // Get the vector from the player to the blockPos.
         Vec3d rayVec = seeVec.subtract(fromVec);
         double reachDistance = interactionManager.getReachDistance();
-
-        CurrInvClient.currInvDebugRenderer.addLine(fromVec, seeVec, 10000);
 
         //Iterate through each block along the vector from the player to the blockPos.
         double stepSize = 0.025;
@@ -107,14 +106,23 @@ public class NavigationUtility {
             BlockPos blockPosAlongVectorBlockPos = new BlockPos((int) Math.floor(blockPosAlongVector.getX()), (int) Math.floor(blockPosAlongVector.getY()), (int) Math.floor(blockPosAlongVector.getZ()));
 
             if (blockPosAlongVectorBlockPos.equals(see)) {
+                if(CurrInvClient.fullSuiteSorter.debugRays == FullSuiteSorter.DebugRays.ALL || CurrInvClient.fullSuiteSorter.debugRays == FullSuiteSorter.DebugRays.SUCCESS)
+                    CurrInvClient.currInvDebugRenderer.addLine(fromVec, seeVec, 10000, CurrInvDebugRenderer.GREEN);
+
                 return true;
             }
 
             // If the blockPos along the vector is not air, the player cannot see the blockPos.
             if (!world.getBlockState(blockPosAlongVectorBlockPos).isAir() && !( world.getBlockState(blockPosAlongVectorBlockPos).getCollisionShape(world, blockPosAlongVectorBlockPos).isEmpty())) {
+                if(CurrInvClient.fullSuiteSorter.debugRays == FullSuiteSorter.DebugRays.ALL || CurrInvClient.fullSuiteSorter.debugRays == FullSuiteSorter.DebugRays.FAIL)
+                    CurrInvClient.currInvDebugRenderer.addLine(fromVec, seeVec, 10000, CurrInvDebugRenderer.RED);
+
                 return false;
             }
         }
+        if(CurrInvClient.fullSuiteSorter.debugRays == FullSuiteSorter.DebugRays.ALL || CurrInvClient.fullSuiteSorter.debugRays == FullSuiteSorter.DebugRays.FAIL)
+            CurrInvClient.currInvDebugRenderer.addLine(fromVec, seeVec, 10000, CurrInvDebugRenderer.GREEN);
+
         return false;
     }
 

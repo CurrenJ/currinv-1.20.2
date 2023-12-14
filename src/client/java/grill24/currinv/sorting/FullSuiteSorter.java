@@ -30,6 +30,7 @@ import net.minecraft.util.math.BlockPos;
 import org.joml.Vector2d;
 
 import java.util.*;
+import java.util.function.BooleanSupplier;
 import java.util.stream.IntStream;
 
 @Command
@@ -528,10 +529,10 @@ public class FullSuiteSorter {
 
     private static boolean canAccessContainerFromBlockPos(ClientPlayerInteractionManager interactionManager, ClientWorld world, ClientPlayerEntity player, BlockPos containerPos, BlockPos blockPos) {
         // Returns true if there is a clear line of sight between player and container, and the player can stand at blockPos.
-        boolean canSee = NavigationUtility.canPlayerSeeBlockPosFromBlockPos(interactionManager, world, player, blockPos, containerPos);
-        boolean canStand = NavigationUtility.hasSpaceForPlayerToStandAtBlockPos(world, player, blockPos);
-        boolean canStandOnBlockBelow = NavigationUtility.canPlayerStandOnBlockBelow(world, player, blockPos);
-        return canStandOnBlockBelow && canStand && canSee;
+        BooleanSupplier canSee = () -> NavigationUtility.canPlayerSeeBlockPosFromBlockPos(interactionManager, world, player, blockPos, containerPos);
+        BooleanSupplier canStand = () -> NavigationUtility.hasSpaceForPlayerToStandAtBlockPos(world, player, blockPos);
+        BooleanSupplier canStandOnBlockBelow = () -> NavigationUtility.canPlayerStandOnBlockBelow(world, player, blockPos);
+        return canStandOnBlockBelow.getAsBoolean() && canStand.getAsBoolean() && canSee.getAsBoolean();
     }
 
     // ---- Debug ----
