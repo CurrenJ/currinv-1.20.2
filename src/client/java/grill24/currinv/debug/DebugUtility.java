@@ -1,6 +1,7 @@
 package grill24.currinv.debug;
 
 import com.mojang.brigadier.context.CommandContext;
+import grill24.currinv.CurrInvClient;
 import grill24.currinv.navigation.NavigationData;
 import net.fabricmc.fabric.api.client.command.v2.FabricClientCommandSource;
 import net.minecraft.client.MinecraftClient;
@@ -14,21 +15,20 @@ import java.util.List;
 
 public class DebugUtility {
 
-    public static List<BlockPos> getNavigationParticles(NavigationData navigationData) {
-        if (navigationData == null)
-            return new ArrayList<>();
-
+    public static List<BlockPos> getPathAheadOfPlayer(NavigationData navigationData) {
         List<BlockPos> pathAheadOfPlayer = navigationData.getPath();
-        BlockPos currentNode = navigationData.getCurrentNode();
-        for (int i = 0; i < pathAheadOfPlayer.size(); i++) {
-            BlockPos pathNode = pathAheadOfPlayer.get(i);
-            if (pathNode.equals(currentNode)) {
-                pathAheadOfPlayer = pathAheadOfPlayer.subList(i, Math.min(pathAheadOfPlayer.size(), i + 24));
-                break;
-            }
-        }
+        pathAheadOfPlayer = pathAheadOfPlayer.subList(navigationData.getCurrentPathNodeIndex(), Math.min(pathAheadOfPlayer.size(), navigationData.getCurrentPathNodeIndex() + 24));
 
         return pathAheadOfPlayer;
+    }
+
+    public static void drawPathLines(NavigationData navigationData) {
+        List<BlockPos> pathAheadOfPlayer = getPathAheadOfPlayer(navigationData);
+
+        for(int i = 1; i < pathAheadOfPlayer.size(); i++)
+        {
+            CurrInvClient.currInvDebugRenderer.addLine(pathAheadOfPlayer.get(i-1).toCenterPos(), pathAheadOfPlayer.get(i).toCenterPos(), 1000, CurrInvDebugRenderer.GREEN);
+        }
     }
 
     public static List<Vec3d> interpolateBetweenPoints(Vec3d from, Vec3d to, int numPoints) {

@@ -37,6 +37,9 @@ public class PlayerNavigator implements IClientPlayerController {
     @CommandOption("debugParticles")
     public boolean debugParticlesEnabled = false;
 
+    @CommandOption("debugLines")
+    public boolean debugLinesEnabled = false;
+
 
     public PlayerNavigator() {
     }
@@ -211,8 +214,11 @@ public class PlayerNavigator implements IClientPlayerController {
     // ----- Debug -----
     @ClientTick(20)
     public void updateDebugParticles(MinecraftClient client) {
+        if(debugLinesEnabled)
+            DebugUtility.drawPathLines(navigationData);
+
         if (debugParticlesEnabled)
-            DebugParticles.setDebugParticles(DebugParticles.NAVIGATION_PARTICLE_KEY, DebugUtility.getNavigationParticles(CurrInvClient.navigator.navigationData), ParticleTypes.END_ROD, DebugParticles.DebugParticleData.RenderType.PATH);
+            DebugParticles.setDebugParticles(DebugParticles.NAVIGATION_PARTICLE_KEY, DebugUtility.getPathAheadOfPlayer(CurrInvClient.navigator.navigationData), ParticleTypes.END_ROD, DebugParticles.DebugParticleData.RenderType.PATH);
         else
             DebugParticles.clearDebugParticles(DebugParticles.NAVIGATION_PARTICLE_KEY);
     }
