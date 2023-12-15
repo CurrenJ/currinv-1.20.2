@@ -2,10 +2,10 @@ package grill24.currinv.sorting;
 
 import grill24.currinv.CurrInvClient;
 import grill24.currinv.IDirtyFlag;
-import grill24.currinv.component.Command;
-import grill24.currinv.component.CommandOption;
-import grill24.currinv.component.ScreenInit;
-import grill24.currinv.component.ScreenTick;
+import grill24.sizzlib.component.Command;
+import grill24.sizzlib.component.CommandOption;
+import grill24.sizzlib.component.ScreenInit;
+import grill24.sizzlib.component.ScreenTick;
 import net.minecraft.block.entity.LootableContainerBlockEntity;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.gui.screen.Screen;

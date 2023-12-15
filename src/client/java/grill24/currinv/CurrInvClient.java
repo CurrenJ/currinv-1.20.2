@@ -1,10 +1,10 @@
 package grill24.currinv;
 
 import com.mojang.brigadier.context.CommandContext;
-import grill24.currinv.component.Command;
-import grill24.currinv.component.CommandAction;
-import grill24.currinv.component.ModComponentRegistry;
-import grill24.currinv.component.StaticToString;
+import grill24.sizzlib.component.Command;
+import grill24.sizzlib.component.CommandAction;
+import grill24.sizzlib.component.ModComponentRegistry;
+import grill24.sizzlib.component.StaticToString;
 import grill24.currinv.debug.CurrInvDebugRenderer;
 import grill24.currinv.debug.DebugParticles;
 import grill24.currinv.debug.DebugUtility;

@@ -1,7 +1,7 @@
 package grill24.currinv.debug;
 
-import grill24.currinv.component.Command;
-import grill24.currinv.component.CommandOption;
+import grill24.sizzlib.component.Command;
+import grill24.sizzlib.component.CommandOption;
 import net.minecraft.client.render.RenderLayer;
 import net.minecraft.client.render.VertexConsumer;
 import net.minecraft.client.render.VertexConsumerProvider;

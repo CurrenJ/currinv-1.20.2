@@ -2,7 +2,7 @@ package grill24.currinv.sorting;
 
 import com.mojang.brigadier.context.CommandContext;
 import grill24.currinv.CurrInvClient;
-import grill24.currinv.component.*;
+import grill24.sizzlib.component.*;
 import grill24.currinv.debug.DebugParticles;
 import grill24.currinv.debug.DebugUtility;
 import grill24.currinv.navigation.NavigationUtility;
