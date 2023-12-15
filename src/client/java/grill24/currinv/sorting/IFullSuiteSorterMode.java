@@ -4,15 +4,15 @@ import net.minecraft.block.entity.LootableContainerBlockEntity;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.gui.screen.Screen;
 
-import java.util.List;
+import java.util.function.Supplier;
 
 public interface IFullSuiteSorterMode {
 
-    List<LootableContainerBlockEntity> getContainersToVisit(MinecraftClient client);
+    Supplier<LootableContainerBlockEntity> getContainersToVisitSupplier(MinecraftClient client);
 
-    boolean doContainerScreenInteractionTick(MinecraftClient client, Screen screen, List<LootableContainerBlockEntity> containersToVisit, int currentContainerIndex);
+    boolean doContainerScreenInteractionTick(MinecraftClient client, Screen screen);
 
     boolean doContainerInteractionTick(MinecraftClient client);
 
-    void onContainerAccessFail(MinecraftClient client, List<LootableContainerBlockEntity> containersToVisit);
+    void onContainerAccessFail(MinecraftClient client);
 }

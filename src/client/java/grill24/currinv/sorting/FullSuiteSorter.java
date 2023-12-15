@@ -34,12 +34,13 @@ import org.joml.Vector2d;
 
 import java.util.*;
 import java.util.function.BooleanSupplier;
+import java.util.function.Supplier;
 import java.util.stream.IntStream;
 
 @Command
 public class FullSuiteSorter {
-    public List<LootableContainerBlockEntity> containersToVisit;
-    public int containerIndex;
+    public Supplier<LootableContainerBlockEntity> containersToVisit;
+    LootableContainerBlockEntity currentContainer;
 
     private enum State {
         IDLE,
@@ -83,7 +84,6 @@ public class FullSuiteSorter {
 
     public FullSuiteSorter() {
         state = State.IDLE;
-        containersToVisit = new ArrayList<>();
         allContainersStockData = new ContainerStockData();
     }
 
@@ -99,14 +99,14 @@ public class FullSuiteSorter {
 
     @CommandAction("scan")
     public void analyzeNearbyContainers(CommandContext<FabricClientCommandSource> commandContext) {
-        mode = new ScanNearbyChestsMode();
+        mode = new ScanNearbyChestsMode(MinecraftClient.getInstance());
 
         tryStart(commandContext);
     }
 
     @CommandAction(value = "collect", arguments = {ItemStackArgumentType.class}, argumentKeys = {"item"})
     public void takeItemsFromNearbyContainers(CommandContext<FabricClientCommandSource> commandContext) {
-        mode = new CollectItemsMode();
+        mode = new CollectItemsMode(MinecraftClient.getInstance());
         CollectItemsMode collectItemsMode = (CollectItemsMode) mode;
         Item item = ItemStackArgumentType.getItemStackArgument(commandContext, "item").getItem();
         collectItemsMode.setItemsToCollect(Collections.singletonList(item));
@@ -117,7 +117,7 @@ public class FullSuiteSorter {
 
     @CommandAction("consolidate")
     public void consolidateAndSort(CommandContext<FabricClientCommandSource> commandContext) {
-        mode = new ConsolidateAndSortMode();
+        mode = new ConsolidateAndSortMode(MinecraftClient.getInstance());
 
         tryStart(commandContext);
     }
@@ -189,13 +189,14 @@ public class FullSuiteSorter {
             return;
         }
 
-        containerIndex = 0;
         state = State.BEGIN_NAVIGATE_TO_CONTAINER;
         placesToStand = null;
 
         // Update our stock reference from the sorter data.
         setAllContainersStockData(CurrInvClient.sorter);
-        containersToVisit = mode.getContainersToVisit(client);
+        containersToVisit = mode.getContainersToVisitSupplier(client);
+
+        currentContainer = containersToVisit.get();
     }
 
     public void setAllContainersStockData(Sorter sorter) {
@@ -205,18 +206,10 @@ public class FullSuiteSorter {
     }
 
     private void startNavigationToContainer(MinecraftClient client) {
-        if (containerIndex >= containersToVisit.size()) {
-            state = State.FINISH;
-            return;
-        }
-
-        // BlockPos{x=1848, y=71, z=1399}
-
-        LootableContainerBlockEntity container = containersToVisit.get(containerIndex);
-        if (container != null) {
+        if (currentContainer != null) {
             if (!CurrInvClient.navigator.isNavigating() && !CurrInvClient.navigator.isSearchingForPath()) {
                 if (placesToStand == null)
-                    placesToStand = getPlacesToStandByContainer(client.interactionManager, client.world, client.player, container.getPos());
+                    placesToStand = getPlacesToStandByContainer(client.interactionManager, client.world, client.player, currentContainer.getPos());
 
                 if (!placesToStand.isEmpty()) {
                     placeToStand = placesToStand.poll();
@@ -225,16 +218,16 @@ public class FullSuiteSorter {
                 } else {
                     if (client.world != null) {
                         // If we fail on this half of the chest - flip to the other half and try again
-                        BlockPos containerPos = container.getPos();
+                        BlockPos containerPos = currentContainer.getPos();
                         BlockPos containerOtherHalfPos = SortingUtility.getOneBlockPosFromDoubleChests(client, containerPos, DoubleBlockProperties.Type.SECOND);
                         if (containerPos != containerOtherHalfPos) {
-                            DebugUtility.print(client, "State: §cFailed to find open space adjacent to container. Trying to navigate to other half of double chest. " + containersToVisit.get(containerIndex).getPos());
-                            containersToVisit.set(containerIndex, (LootableContainerBlockEntity) client.world.getBlockEntity(containerOtherHalfPos));
+                            DebugUtility.print(client, "State: §cFailed to find open space adjacent to container. Trying to navigate to other half of double chest. " + currentContainer.getPos());
+                            currentContainer = (LootableContainerBlockEntity) client.world.getBlockEntity(containerOtherHalfPos);
                             return;
                         }
                     }
 
-                    mode.onContainerAccessFail(client, containersToVisit);
+                    mode.onContainerAccessFail(client);
                     state = State.NEXT_CONTAINER;
                 }
             }
@@ -254,35 +247,33 @@ public class FullSuiteSorter {
                 placesToStand = null;
                 if (client.world != null) {
 
-                    BlockPos containerPos = containersToVisit.get(containerIndex).getPos();
+                    BlockPos containerPos = currentContainer.getPos();
                     BlockPos containerOtherHalfPos = SortingUtility.getOneBlockPosFromDoubleChests(client, containerPos, DoubleBlockProperties.Type.SECOND);
                     if (containerPos != containerOtherHalfPos) {
-                        DebugUtility.print(client, "State: §cFailed to find path to container. Trying to navigate to other half of double chest. " + containersToVisit.get(containerIndex).getPos());
-                        containersToVisit.set(containerIndex, (LootableContainerBlockEntity) client.world.getBlockEntity(containerOtherHalfPos));
+                        DebugUtility.print(client, "State: §cFailed to find path to container. Trying to navigate to other half of double chest. " + currentContainer.getPos());
+                        currentContainer = (LootableContainerBlockEntity) client.world.getBlockEntity(containerOtherHalfPos);
                         state = State.BEGIN_NAVIGATE_TO_CONTAINER;
                         return;
                     }
 
                 }
 
-                mode.onContainerAccessFail(client, containersToVisit);
+                mode.onContainerAccessFail(client);
                 state = State.NEXT_CONTAINER;
             }
         }
     }
 
     private void lookAtContainer(MinecraftClient client) {
-        LootableContainerBlockEntity container = containersToVisit.get(containerIndex);
-
         final long millisPerRotation = 2000;
         float dt = (System.currentTimeMillis() % (millisPerRotation) / ((float) millisPerRotation));
         double angle = 2 * Math.PI * dt;
         lookRadius += dt * 0.25f;
 
-        if (client.player != null && container != null && lookRadius < 20) {
+        if (client.player != null && currentContainer != null && lookRadius < 20) {
             float lerpFactor = 0.8f;
 
-            Vector2d pitchAndYaw = NavigationUtility.getPitchAndYawToLookTowardsBlockFace(client.world, client.player, container.getPos());
+            Vector2d pitchAndYaw = NavigationUtility.getPitchAndYawToLookTowardsBlockFace(client.world, client.player, currentContainer.getPos());
             float yaw = (float) pitchAndYaw.y;
             yaw += (float) (Math.sin(angle) * lookRadius);
             client.player.setYaw(NavigationUtility.angleLerp(client.player.getYaw(), yaw, lerpFactor));
@@ -300,7 +291,7 @@ public class FullSuiteSorter {
                 BlockPos blockPos = ((BlockHitResult) client.crosshairTarget).getBlockPos();
                 BlockState blockState = client.world.getBlockState(blockPos);
                 Block block = blockState.getBlock();
-                if (blockPos.equals(container.getPos())) {
+                if (blockPos.equals(currentContainer.getPos())) {
                     state = State.OPEN_CONTAINER;
                     openContainer(client);
                     return;
@@ -319,7 +310,7 @@ public class FullSuiteSorter {
                     }
 
                     // Click through sign
-                    if (attachedPos.equals(container.getPos())) {
+                    if (attachedPos.equals(currentContainer.getPos())) {
                         client.crosshairTarget = new BlockHitResult(client.crosshairTarget.getPos(), blockState.get(WallSignBlock.FACING), attachedPos, false);
                         state = State.OPEN_CONTAINER;
                         openContainer(client);
@@ -340,9 +331,7 @@ public class FullSuiteSorter {
     private void openContainer(MinecraftClient client) {
         assert client.interactionManager != null;
 
-        LootableContainerBlockEntity container = containersToVisit.get(containerIndex);
-
-        if (container != null) {
+        if (currentContainer != null) {
             // All credit for this bit of logic goes to @Giselbaer (https://www.curseforge.com/minecraft/mc-mods/clickthrough) <3
             if (client.crosshairTarget instanceof EntityHitResult entityHitResult && entityHitResult.getEntity() instanceof ItemFrameEntity itemFrameEntity) {
                 // copied from AbstractDecorationEntity#canStayAttached
@@ -369,7 +358,7 @@ public class FullSuiteSorter {
 
             if (client.crosshairTarget instanceof BlockHitResult blockHitResult) {
                 ActionResult actionResult = client.interactionManager.interactBlock(client.player, Hand.MAIN_HAND, blockHitResult);
-                if (blockHitResult.getBlockPos().equals(container.getPos())) {
+                if (blockHitResult.getBlockPos().equals(currentContainer.getPos())) {
                     if (actionResult == ActionResult.SUCCESS) {
                         // TODO Fail to open blocked chests gets us stuck in the netxt blockState. Need to handle this.
                         state = State.WAIT_FOR_CONTAINER_SCREEN;
@@ -379,7 +368,7 @@ public class FullSuiteSorter {
                         return;
                     }
                 } else {
-                    DebugUtility.print(client, "§cFailed to open container at " + container.getPos() + " because the block hit result was " + blockHitResult.getBlockPos() + " instead.");
+                    DebugUtility.print(client, "§cFailed to open container at " + currentContainer.getPos() + " because the block hit result was " + blockHitResult.getBlockPos() + " instead.");
                     state = State.NEXT_CONTAINER;
                     return;
                 }
@@ -402,7 +391,7 @@ public class FullSuiteSorter {
     }
 
     private void doContainerScreenInteraction(MinecraftClient client, Screen screen) {
-        if (mode.doContainerScreenInteractionTick(client, screen, containersToVisit, containerIndex))
+        if (mode.doContainerScreenInteractionTick(client, screen))
             state = State.CLOSE_CONTAINER;
     }
 
@@ -417,9 +406,9 @@ public class FullSuiteSorter {
     private void nextContainer(MinecraftClient client) {
         closeOpenContainer(client);
         if (client.currentScreen == null) {
-            containerIndex++;
             placesToStand = null;
-            if (containerIndex >= containersToVisit.size()) {
+            currentContainer = containersToVisit.get();
+            if (currentContainer == null) {
                 state = State.FINISH;
             } else {
                 state = State.BEGIN_NAVIGATE_TO_CONTAINER;
@@ -477,11 +466,11 @@ public class FullSuiteSorter {
                 DebugUtility.print(client, "State: " + color + state);
             } else {
                 if (state == State.NEXT_CONTAINER && lastState == State.BEGIN_NAVIGATE_TO_CONTAINER) {
-                    DebugUtility.print(client, "State: §cFailed to find open space adjacent to container. Moving on to next container. " + containersToVisit.get(containerIndex).getPos());
+                    DebugUtility.print(client, "State: §cFailed to find open space adjacent to container. Moving on to next container. " + currentContainer.getPos());
                 } else if (state == State.NEXT_CONTAINER && lastState == State.WAIT_TO_ARRIVE_AT_CONTAINER) {
-                    DebugUtility.print(client, "State: §cFailed to find path to container. Moving on to next container. " + containersToVisit.get(containerIndex).getPos());
+                    DebugUtility.print(client, "State: §cFailed to find path to container. Moving on to next container. " + currentContainer.getPos());
                 } else if (state == State.NEXT_CONTAINER && lastState != State.CLOSE_CONTAINER) {
-                    DebugUtility.print(client, "State: §cFailed in blockState " + lastState.name() + ". Moving on to next container. " + containersToVisit.get(containerIndex).getPos());
+                    DebugUtility.print(client, "State: §cFailed in blockState " + lastState.name() + ". Moving on to next container. " + currentContainer.getPos());
                 } else if (state == State.NEXT_CONTAINER) {
                     DebugUtility.print(client, "State: §aSuccessfully closed container. Moving on to next container.");
                 } else if (state == State.FINISH) {
@@ -548,16 +537,17 @@ public class FullSuiteSorter {
     @ClientTick
     public void updateDebugParticles() {
         if (isDebugParticlesEnabled && state != State.IDLE) {
-            if (containerIndex < containersToVisit.size()) {
-                BlockPos activeContainer = containersToVisit.get(containerIndex).getPos();
+            if (currentContainer != null) {
+                BlockPos activeContainer = currentContainer.getPos();
 
-                DebugParticles.setDebugParticles(DebugParticles.SORTING_PARTICLE_KEY,
-                        IntStream.range(0, containersToVisit.size())
-                                .filter(i -> i > containerIndex)
-                                .mapToObj(containersToVisit::get)
-                                .map(BlockEntity::getPos).toList(),
-                        ParticleTypes.SOUL);
-                DebugParticles.setDebugParticles(DebugParticles.SORTING_ACTIVE_CONTAINER_PARTICLE_KEY, Collections.singletonList(activeContainer), ParticleTypes.FLAME);
+                // TODO: Use fullsuitesortermode
+//                DebugParticles.setDebugParticles(DebugParticles.SORTING_PARTICLE_KEY,
+//                        IntStream.range(0, containersToVisit.size())
+//                                .filter(i -> i > containerIndex)
+//                                .mapToObj(containersToVisit::get)
+//                                .map(BlockEntity::getPos).toList(),
+//                        ParticleTypes.SOUL);
+//                DebugParticles.setDebugParticles(DebugParticles.SORTING_ACTIVE_CONTAINER_PARTICLE_KEY, Collections.singletonList(activeContainer), ParticleTypes.FLAME);
             }
         } else {
             DebugParticles.clearDebugParticles(DebugParticles.SORTING_PARTICLE_KEY);

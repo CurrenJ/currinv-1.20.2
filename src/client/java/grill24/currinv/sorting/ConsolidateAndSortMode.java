@@ -11,7 +11,7 @@ import net.minecraft.util.math.BlockPos;
 
 import java.util.*;
 
-public class ConsolidateAndSortMode implements IFullSuiteSorterMode {
+public class ConsolidateAndSortMode extends FullSuiteSorterMode {
 
     private static final int RANGE = 16;
     private List<Instruction> instructions;
@@ -26,11 +26,10 @@ public class ConsolidateAndSortMode implements IFullSuiteSorterMode {
         Return
     }
 
-    @Override
-    public List<LootableContainerBlockEntity> getContainersToVisit(MinecraftClient client) {
-        generateInstructions(client, CurrInvClient.fullSuiteSorter.allContainersStockData);
+    public ConsolidateAndSortMode(MinecraftClient client) {
+        super(client);
 
-        ArrayList<LootableContainerBlockEntity> containersToVisit = new ArrayList<>();
+        generateInstructions(client, CurrInvClient.fullSuiteSorter.allContainersStockData);
 
         if (client.world != null) {
 
@@ -40,13 +39,10 @@ public class ConsolidateAndSortMode implements IFullSuiteSorterMode {
             }
 
         }
-
-        return containersToVisit;
     }
 
     @Override
-    public boolean doContainerScreenInteractionTick(MinecraftClient client, Screen screen, List<LootableContainerBlockEntity> containersToVisit, int currentContainerIndex) {
-
+    public boolean doContainerScreenInteractionTick(MinecraftClient client, Screen screen) {
         if (instructions.size() <= currentContainerIndex)
             return true;
 
@@ -87,30 +83,29 @@ public class ConsolidateAndSortMode implements IFullSuiteSorterMode {
     }
 
     @Override
-    public void onContainerAccessFail(MinecraftClient client, List<LootableContainerBlockEntity> containersToVisit) {
+    public void onContainerAccessFail(MinecraftClient client) {
         // If we can't access a container, remove it's consolidation step from the instructions list
         // and deposit the items back to where they came from
         int nextConsolidationInstructionIndex = -1;
         FullSuiteSorter fullSuiteSorter = CurrInvClient.fullSuiteSorter;
-        Item currentItem = instructions.get(CurrInvClient.fullSuiteSorter.containerIndex).item;
+        Item currentItem = instructions.get(currentContainerIndex).item;
         for (int i = 0; i < instructions.size(); i++) {
             Instruction instruction = instructions.get(i);
             if (instruction.item.equals(currentItem)) {
-                if (instruction.state == State.Consolidate && i >= CurrInvClient.fullSuiteSorter.containerIndex) {
+                if (instruction.state == State.Consolidate && i >= currentContainerIndex) {
                     nextConsolidationInstructionIndex = i;
                     break;
                 } else {
                     instructions.set(i, new Instruction(instruction.pos, State.Return, instruction.item));
 
                     // If we're depositing items from a container that we've already gathered from, we need to update the container index
-                    CurrInvClient.fullSuiteSorter.containerIndex--;
+                    currentContainerIndex--;
                 }
             }
         }
 
         instructions.remove(nextConsolidationInstructionIndex);
-        CurrInvClient.fullSuiteSorter.containerIndex--;
-        CurrInvClient.fullSuiteSorter.containersToVisit.remove(nextConsolidationInstructionIndex);
+        currentContainerIndex--;
     }
 
     public void generateInstructions(MinecraftClient client, ContainerStockData allContainersStockData) {

@@ -10,14 +10,17 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 
-public class CollectItemsMode implements IFullSuiteSorterMode {
+public class CollectItemsMode extends FullSuiteSorterMode {
 
     private List<Item> itemsToCollect;
     private ContainerStockData allContainersStockData;
 
-    @Override
-    public List<LootableContainerBlockEntity> getContainersToVisit(MinecraftClient client) {
-        ArrayList<LootableContainerBlockEntity> containersWithItems = new ArrayList<>();
+    private ArrayList<LootableContainerBlockEntity> containersWithItems;
+    private int currentContainerIndex;
+
+    public CollectItemsMode(MinecraftClient client) {
+        super(client);
+
         if (client.world != null) {
 
             for (Item item : itemsToCollect) {
@@ -34,11 +37,10 @@ public class CollectItemsMode implements IFullSuiteSorterMode {
             }
 
         }
-        return containersWithItems;
     }
 
     @Override
-    public boolean doContainerScreenInteractionTick(MinecraftClient client, Screen screen, List<LootableContainerBlockEntity> containersToVisit, int currentContainerIndex) {
+    public boolean doContainerScreenInteractionTick(MinecraftClient client, Screen screen) {
         SortingUtility.collectItems(client, screen, itemsToCollect, allContainersStockData, false);
         return true;
     }
@@ -49,7 +51,7 @@ public class CollectItemsMode implements IFullSuiteSorterMode {
     }
 
     @Override
-    public void onContainerAccessFail(MinecraftClient client, List<LootableContainerBlockEntity> containersToVisit) {
+    public void onContainerAccessFail(MinecraftClient client) {
 
     }
 
