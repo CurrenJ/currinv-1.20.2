@@ -2,10 +2,10 @@ package grill24.currinv.sorting;
 
 import com.mojang.brigadier.context.CommandContext;
 import grill24.currinv.CurrInvClient;
-import grill24.sizzlib.component.*;
 import grill24.currinv.debug.DebugParticles;
 import grill24.currinv.debug.DebugUtility;
 import grill24.currinv.navigation.NavigationUtility;
+import grill24.sizzlib.component.*;
 import net.fabricmc.fabric.api.client.command.v2.FabricClientCommandSource;
 import net.minecraft.block.Block;
 import net.minecraft.block.BlockState;
@@ -23,7 +23,6 @@ import net.minecraft.client.world.ClientWorld;
 import net.minecraft.command.argument.ItemStackArgumentType;
 import net.minecraft.entity.decoration.ItemFrameEntity;
 import net.minecraft.item.Item;
-import net.minecraft.particle.ParticleTypes;
 import net.minecraft.util.ActionResult;
 import net.minecraft.util.Hand;
 import net.minecraft.util.hit.BlockHitResult;
@@ -35,7 +34,6 @@ import org.joml.Vector2d;
 import java.util.*;
 import java.util.function.BooleanSupplier;
 import java.util.function.Supplier;
-import java.util.stream.IntStream;
 
 @Command
 public class FullSuiteSorter {

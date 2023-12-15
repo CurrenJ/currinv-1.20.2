@@ -7,7 +7,7 @@ import net.minecraft.client.gui.screen.Screen;
 import java.util.ArrayList;
 import java.util.function.Supplier;
 
-public abstract class FullSuiteSorterMode implements IFullSuiteSorterMode{
+public abstract class FullSuiteSorterMode implements IFullSuiteSorterMode {
     protected ArrayList<LootableContainerBlockEntity> containersToVisit = new ArrayList<>();
     protected int currentContainerIndex = 0;
 
@@ -20,7 +20,7 @@ public abstract class FullSuiteSorterMode implements IFullSuiteSorterMode{
     public Supplier<LootableContainerBlockEntity> getContainersToVisitSupplier(MinecraftClient client) {
         return () -> {
             currentContainerIndex++;
-            if(currentContainerIndex >= containersToVisit.size())
+            if (currentContainerIndex >= containersToVisit.size())
                 return null;
 
             LootableContainerBlockEntity lootableContainerBlockEntity = containersToVisit.get(currentContainerIndex);

@@ -36,7 +36,7 @@ public class ScanNearbyChestsMode extends FullSuiteSorterMode {
             }
 
         }
-        this.containersToVisit =  new ArrayList<>(containersToVisit);
+        this.containersToVisit = new ArrayList<>(containersToVisit);
     }
 
     @Override

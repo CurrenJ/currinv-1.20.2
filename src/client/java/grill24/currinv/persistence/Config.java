@@ -1,8 +1,8 @@
 package grill24.currinv.persistence;
 
+import grill24.currinv.sorting.Sorter;
 import grill24.sizzlib.component.Command;
 import grill24.sizzlib.component.CommandOption;
-import grill24.currinv.sorting.Sorter;
 import net.minecraft.nbt.NbtCompound;
 
 @Command("config")

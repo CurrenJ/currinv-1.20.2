@@ -1,10 +1,6 @@
 package grill24.currinv;
 
 import com.mojang.brigadier.context.CommandContext;
-import grill24.sizzlib.component.Command;
-import grill24.sizzlib.component.CommandAction;
-import grill24.sizzlib.component.ModComponentRegistry;
-import grill24.sizzlib.component.StaticToString;
 import grill24.currinv.debug.CurrInvDebugRenderer;
 import grill24.currinv.debug.DebugParticles;
 import grill24.currinv.debug.DebugUtility;
@@ -12,6 +8,10 @@ import grill24.currinv.navigation.PlayerNavigator;
 import grill24.currinv.persistence.Config;
 import grill24.currinv.sorting.FullSuiteSorter;
 import grill24.currinv.sorting.Sorter;
+import grill24.sizzlib.component.Command;
+import grill24.sizzlib.component.CommandAction;
+import grill24.sizzlib.component.ModComponentRegistry;
+import grill24.sizzlib.component.StaticToString;
 import net.fabricmc.api.ClientModInitializer;
 import net.fabricmc.fabric.api.client.command.v2.FabricClientCommandSource;
 import net.fabricmc.fabric.api.event.player.UseBlockCallback;

@@ -1,12 +1,12 @@
 package grill24.currinv.navigation;
 
 import grill24.currinv.CurrInvClient;
+import grill24.currinv.debug.DebugParticles;
+import grill24.currinv.debug.DebugUtility;
 import grill24.sizzlib.component.ClientTick;
 import grill24.sizzlib.component.Command;
 import grill24.sizzlib.component.CommandAction;
 import grill24.sizzlib.component.CommandOption;
-import grill24.currinv.debug.DebugParticles;
-import grill24.currinv.debug.DebugUtility;
 import net.minecraft.block.Block;
 import net.minecraft.block.Blocks;
 import net.minecraft.block.LeavesBlock;

@@ -1,10 +1,10 @@
 package grill24.currinv.debug;
 
 import com.mojang.brigadier.context.CommandContext;
+import grill24.currinv.navigation.NavigationData;
 import grill24.sizzlib.component.ClientTick;
 import grill24.sizzlib.component.Command;
 import grill24.sizzlib.component.CommandOption;
-import grill24.currinv.navigation.NavigationData;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.network.ClientPlayerEntity;
 import net.minecraft.client.world.ClientWorld;
