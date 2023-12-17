@@ -54,6 +54,7 @@ public class FullSuiteSorter {
         FINISH
     }
 
+    @CommandOption("state")
     private State state;
 
     private State lastState;
@@ -104,11 +105,8 @@ public class FullSuiteSorter {
 
     @CommandAction(value = "collect", arguments = {ItemStackArgumentType.class}, argumentKeys = {"item"})
     public void takeItemsFromNearbyContainers(CommandContext<FabricClientCommandSource> commandContext) {
-        mode = new CollectItemsMode(MinecraftClient.getInstance());
-        CollectItemsMode collectItemsMode = (CollectItemsMode) mode;
         Item item = ItemStackArgumentType.getItemStackArgument(commandContext, "item").getItem();
-        collectItemsMode.setItemsToCollect(Collections.singletonList(item));
-        collectItemsMode.setStockData(allContainersStockData);
+        mode = new CollectItemsMode(MinecraftClient.getInstance(), Collections.singletonList(item));
 
         tryStart(commandContext);
     }
@@ -211,7 +209,7 @@ public class FullSuiteSorter {
 
                 if (!placesToStand.isEmpty()) {
                     placeToStand = placesToStand.poll();
-                    CurrInvClient.navigator.startNavigationToPosition(client.player.getBlockPos(), placeToStand, false, 3000);
+                    CurrInvClient.navigator.startNavigationToPosition(client.player.getBlockPos(), placeToStand, false, 1000);
                     state = State.WAIT_TO_ARRIVE_AT_CONTAINER;
                 } else {
                     if (client.world != null) {
@@ -285,7 +283,8 @@ public class FullSuiteSorter {
                 // copied from AbstractDecorationEntity#canStayAttached
                 BlockPos attachedPos = itemFrameEntity.getDecorationBlockPos().offset(itemFrameEntity.getHorizontalFacing().getOpposite());
                 client.crosshairTarget = new BlockHitResult(client.crosshairTarget.getPos(), itemFrameEntity.getHorizontalFacing(), attachedPos, false);
-            } else if (client.crosshairTarget.getType() == HitResult.Type.BLOCK) {
+            }
+            if (client.crosshairTarget.getType() == HitResult.Type.BLOCK) {
                 BlockPos blockPos = ((BlockHitResult) client.crosshairTarget).getBlockPos();
                 BlockState blockState = client.world.getBlockState(blockPos);
                 Block block = blockState.getBlock();

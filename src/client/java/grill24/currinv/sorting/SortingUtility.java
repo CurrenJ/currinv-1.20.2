@@ -1,6 +1,7 @@
 package grill24.currinv.sorting;
 
 import grill24.currinv.CurrInvClient;
+import grill24.currinv.debug.DebugUtility;
 import net.minecraft.block.ChestBlock;
 import net.minecraft.block.DoubleBlockProperties;
 import net.minecraft.block.entity.LootableContainerBlockEntity;
@@ -9,6 +10,7 @@ import net.minecraft.client.gui.screen.Screen;
 import net.minecraft.client.gui.screen.ingame.GenericContainerScreen;
 import net.minecraft.client.gui.screen.ingame.HandledScreen;
 import net.minecraft.client.gui.screen.ingame.ShulkerBoxScreen;
+import net.minecraft.entity.player.PlayerInventory;
 import net.minecraft.inventory.Inventory;
 import net.minecraft.item.Item;
 import net.minecraft.item.ItemStack;
@@ -45,30 +47,40 @@ public class SortingUtility {
         client.interactionManager.clickSlot(screen.getScreenHandler().syncId, slotId, 0, slotActionType, client.player);
     }
 
-    public static void depositItem(MinecraftClient client, Screen screen, Item item) {
+    public static boolean depositItem(MinecraftClient client, Screen screen, Item item) {
         assert client.player != null;
-        Inventory playerInventory = client.player.getInventory();
+        PlayerInventory playerInventory = client.player.getInventory();
 
         if (screen instanceof HandledScreen<?> handledScreen) {
-            for (int i = PLAYER_HOTBAR_SLOTS_END_INDEX; i < playerInventory.size(); i++) {
-                ItemStack itemStack = playerInventory.getStack(i);
+            for (int i = PLAYER_HOTBAR_SLOTS_END_INDEX; i < playerInventory.main.size(); i++) {
+                OptionalInt slotIdOptional = handledScreen.getScreenHandler().getSlotIndex(playerInventory, i);
+                if (slotIdOptional.isPresent()) {
+                    int slotId = slotIdOptional.getAsInt();
+                    ItemStack itemStack = handledScreen.getScreenHandler().getSlot(slotId).getStack();
 
-                if (itemStack.getItem().equals(item)) {
-                    OptionalInt slotId = handledScreen.getScreenHandler().getSlotIndex(playerInventory, i);
-                    if (slotId.isPresent()) {
-                        clickSlot(client, handledScreen, slotId.getAsInt(), SlotActionType.QUICK_MOVE);
+                    if (itemStack.getItem().equals(item)) {
+                        clickSlot(client, handledScreen, slotId, SlotActionType.QUICK_MOVE);
+
+                        // Failed to deposit items.
+                        if (!handledScreen.getScreenHandler().getSlot(slotId).getStack().isEmpty())
+                            return false;
                     }
                 }
             }
+
+            // Success.
+            return true;
         }
+        // Failure.
+        return false;
     }
 
-    public static void collectItems(MinecraftClient client, Screen screen, List<Item> itemsToCollect, ContainerStockData stockData, boolean isAllowedToInsertIntoHotbar) {
+    public static boolean collectItems(MinecraftClient client, Screen screen, List<Item> itemsToCollect, ContainerStockData stockData, boolean isAllowedToInsertIntoHotbar) {
         assert client.player != null;
         assert client.interactionManager != null;
 
         if (!(screen instanceof HandledScreen<?> handledScreen))
-            return;
+            return false;
 
         Optional<Inventory> inventory = tryGetInventoryFromScreen(handledScreen);
         if (inventory.isPresent()) {
@@ -89,17 +101,23 @@ public class SortingUtility {
                                     Inventory playerInventory = client.player.getInventory();
                                     for (int i = PLAYER_HOTBAR_SLOTS_END_INDEX; i < playerInventory.size(); i++) {
                                         if (playerInventory.getStack(i).isEmpty() || (playerInventory.getStack(i).getItem().equals(item) && playerInventory.getStack(i).getCount() < playerInventory.getStack(i).getMaxCount())) {
-                                            int slotIndex = handledScreen.getScreenHandler().getSlotIndex(playerInventory, i).getAsInt();
-                                            System.out.println(slotIndex);
-                                            System.out.println(handledScreen.getScreenHandler().getCursorStack());
-                                            clickSlot(client, handledScreen, slotIndex);
-                                            if (handledScreen.getScreenHandler().getCursorStack().isEmpty())
-                                                break;
+                                            OptionalInt slotIndex = handledScreen.getScreenHandler().getSlotIndex(playerInventory, i);
+                                            if (slotIndex.isPresent()) {
+                                                System.out.println(slotIndex);
+                                                System.out.println(handledScreen.getScreenHandler().getCursorStack());
+                                                clickSlot(client, handledScreen, slotIndex.getAsInt());
+                                                if (handledScreen.getScreenHandler().getCursorStack().isEmpty())
+                                                    break;
+                                            } else {
+                                                DebugUtility.print(client, "Could not find slot in inventory for index " + i);
+                                            }
                                         }
                                     }
 
                                     if (!handledScreen.getScreenHandler().getCursorStack().isEmpty()) {
                                         clickSlot(client, handledScreen, slotId);
+                                        CurrInvClient.sorter.tryInventoryScreen(handledScreen);
+                                        return false;
                                     }
                                 }
                             }
@@ -109,7 +127,9 @@ public class SortingUtility {
             }
 
         }
+
         CurrInvClient.sorter.tryInventoryScreen(handledScreen);
+        return true;
     }
 
     public static BlockPos getOneBlockPosFromDoubleChests(MinecraftClient client, BlockPos pos) {

@@ -51,7 +51,6 @@ public class ItemQuantityAndSlots implements Comparable<ItemQuantityAndSlots> {
             case QUANTITY -> compareByQuantity(o);
             case LEXICOGRAPHICAL -> compareByLexicographical(o);
             case CREATIVE_MENU -> compareByCreativeMenuOrder(o);
-            default -> 0;
         };
     }
 
@@ -59,24 +58,26 @@ public class ItemQuantityAndSlots implements Comparable<ItemQuantityAndSlots> {
         int quantityComparison = Integer.compare(this.quantity, o.quantity);
 
         // How we neatly sort non-stackables; i.e. Music Discs
-        if (this.item.getMaxCount() == 1 || o.item.getMaxCount() == 1) {
-            // Max stack, then lexicographical
-            // Sort by max stack first, so that non-stackables are sorted to the tail of the container
-            int maxStack = Integer.compare(this.item.getMaxCount(), o.item.getMaxCount());
-            if (maxStack != 0) {
-                return maxStack;
-            } else {
-                return this.item.toString().compareTo(o.item.toString());
-            }
-        }
+//        if (this.item.getMaxCount() == 1 || o.item.getMaxCount() == 1) {
+//            // Max stack, then lexicographical
+//            // Sort by max stack first, so that non-stackables are sorted to the tail of the container
+//            int maxStack = Integer.compare(this.item.getMaxCount(), o.item.getMaxCount());
+//            if (maxStack != 0) {
+//                return maxStack;
+//            } else {
+//                return this.item.toString().compareTo(o.item.toString());
+//            }
+//        }
         // Typical case: sort by quantity
-        else if (quantityComparison != 0) {
-            return quantityComparison;
-        }
+//        else if (quantityComparison != 0) {
+//            return quantityComparison;
+//        }
         // Fallback to lexicographical
-        else {
-            return compareByLexicographical(o);
-        }
+//        else {
+//            return compareByLexicographical(o);
+//        }
+
+        return quantityComparison;
     }
 
     public int compareByLexicographical(ItemQuantityAndSlots o) {

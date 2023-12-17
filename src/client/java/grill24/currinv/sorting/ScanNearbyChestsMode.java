@@ -6,12 +6,16 @@ import net.minecraft.client.gui.screen.Screen;
 
 import java.util.ArrayList;
 import java.util.LinkedHashSet;
+import java.util.function.Supplier;
 
 public class ScanNearbyChestsMode extends FullSuiteSorterMode {
 
     public ScanNearbyChestsMode(MinecraftClient client) {
         super(client);
+    }
 
+    @Override
+    public Supplier<LootableContainerBlockEntity> getContainersToVisitSupplier(MinecraftClient client) {
         int searchRadius = 16;
         int containerLimit = 100;
 
@@ -37,6 +41,8 @@ public class ScanNearbyChestsMode extends FullSuiteSorterMode {
 
         }
         this.containersToVisit = new ArrayList<>(containersToVisit);
+
+        return super.getContainersToVisitSupplier(client);
     }
 
     @Override
