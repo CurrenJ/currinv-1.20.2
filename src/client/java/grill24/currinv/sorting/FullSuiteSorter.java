@@ -20,6 +20,7 @@ import net.minecraft.client.gui.screen.Screen;
 import net.minecraft.client.network.ClientPlayerEntity;
 import net.minecraft.client.network.ClientPlayerInteractionManager;
 import net.minecraft.client.world.ClientWorld;
+import net.minecraft.command.argument.ItemStackArgument;
 import net.minecraft.command.argument.ItemStackArgumentType;
 import net.minecraft.entity.decoration.ItemFrameEntity;
 import net.minecraft.item.Item;
@@ -103,9 +104,9 @@ public class FullSuiteSorter {
         tryStart(commandContext);
     }
 
-    @CommandAction(value = "collect", arguments = {ItemStackArgumentType.class}, argumentKeys = {"item"})
-    public void takeItemsFromNearbyContainers(CommandContext<FabricClientCommandSource> commandContext) {
-        Item item = ItemStackArgumentType.getItemStackArgument(commandContext, "item").getItem();
+    @CommandAction("collect")
+    public void takeItemsFromNearbyContainers(CommandContext<FabricClientCommandSource> commandContext, ItemStackArgument itemStackArgument) {
+        Item item = itemStackArgument.getItem();
         mode = new CollectItemsMode(MinecraftClient.getInstance(), Collections.singletonList(item));
 
         tryStart(commandContext);
