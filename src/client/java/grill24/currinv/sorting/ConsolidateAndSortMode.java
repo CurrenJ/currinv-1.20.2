@@ -43,6 +43,8 @@ public class ConsolidateAndSortMode extends FullSuiteSorterMode {
             while (currentInstructionIndex < instructions.size()) {
                 if (currentInstructionIndex < 0 || instructions.get(currentInstructionIndex).blockPos.isEmpty()) {
                     currentInstructionIndex++;
+                    if (currentInstructionIndex >= instructions.size())
+                        return null;
                 } else {
                     instructions.get(currentInstructionIndex).blockPos.remove();
                 }

@@ -12,6 +12,7 @@ import grill24.sizzlib.component.Command;
 import grill24.sizzlib.component.CommandAction;
 import grill24.sizzlib.component.ModComponentRegistry;
 import grill24.sizzlib.component.StaticToString;
+import grill24.sizzlib.persistence.PersistenceManager;
 import net.fabricmc.api.ClientModInitializer;
 import net.fabricmc.fabric.api.client.command.v2.FabricClientCommandSource;
 import net.fabricmc.fabric.api.event.player.UseBlockCallback;
@@ -20,8 +21,13 @@ import net.minecraft.block.entity.LootableContainerBlockEntity;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.util.ActionResult;
 
+import java.io.File;
+import java.nio.file.Path;
+
 @Command("currInv")
 public class CurrInvClient implements ClientModInitializer {
+
+    private static String DATA_DIR = "data/currinv/";
     public static ModComponentRegistry modComponentRegistry;
     public static Config config;
     public static Sorter sorter;
@@ -31,7 +37,6 @@ public class CurrInvClient implements ClientModInitializer {
 
     @Override
     public void onInitializeClient() {
-        config = new Config();
         sorter = new Sorter();
         navigator = new PlayerNavigator();
         fullSuiteSorter = new FullSuiteSorter();
@@ -40,13 +45,11 @@ public class CurrInvClient implements ClientModInitializer {
         registerUseBlockEvents();
 
         modComponentRegistry = new ModComponentRegistry(CurrInvClient.class);
-        modComponentRegistry.registerComponent(CurrInvClient.config);
         modComponentRegistry.registerComponent(CurrInvClient.navigator);
         modComponentRegistry.registerComponent(CurrInvClient.sorter);
         modComponentRegistry.registerComponent(CurrInvClient.fullSuiteSorter);
         modComponentRegistry.registerComponent(DebugParticles.class);
         modComponentRegistry.registerComponent(CurrInvClient.currInvDebugRenderer);
-        modComponentRegistry.registerComponents();
     }
 
     public static void registerUseBlockEvents() {
@@ -67,6 +70,23 @@ public class CurrInvClient implements ClientModInitializer {
     @StaticToString
     public static String toStringStatic() {
         return "CurrInv is a mod developed by Curren Jeandell.";
+    }
+
+    public static void setBiomeAccessSeed(long biomeAccessSeed) {
+        if (config == null || config.getBiomeAccessSeed() != biomeAccessSeed) {
+            config = new Config(biomeAccessSeed);
+
+            modComponentRegistry.registerComponent(CurrInvClient.config);
+            modComponentRegistry.registerComponents();
+        }
+    }
+
+    public static Path getAbsoluteDataDir() {
+        return PersistenceManager.getRelativeDirectoryInMinecraftDirectory(DATA_DIR);
+    }
+
+    public static File getFileInDataDir(String filename) {
+        return new File(getAbsoluteDataDir().toFile(), filename);
     }
 }
 

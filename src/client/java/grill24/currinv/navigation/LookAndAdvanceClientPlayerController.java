@@ -56,7 +56,7 @@ public class LookAndAdvanceClientPlayerController extends ClientPlayerController
     @Override
     public boolean shouldJump(boolean jumping) {
         if (CurrInvClient.navigator.isNavigating())
-            return shouldJump;
+            return shouldJump || jumping;
         else
             return jumping;
     }

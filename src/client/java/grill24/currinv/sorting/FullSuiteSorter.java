@@ -17,11 +17,11 @@ import net.minecraft.block.entity.LootableContainerBlockEntity;
 import net.minecraft.block.entity.SignBlockEntity;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.gui.screen.Screen;
+import net.minecraft.client.gui.screen.ingame.HandledScreen;
 import net.minecraft.client.network.ClientPlayerEntity;
 import net.minecraft.client.network.ClientPlayerInteractionManager;
 import net.minecraft.client.world.ClientWorld;
 import net.minecraft.command.argument.ItemStackArgument;
-import net.minecraft.command.argument.ItemStackArgumentType;
 import net.minecraft.entity.decoration.ItemFrameEntity;
 import net.minecraft.item.Item;
 import net.minecraft.util.ActionResult;
@@ -80,6 +80,8 @@ public class FullSuiteSorter {
 
     @CommandOption(value = "debugRays")
     public DebugRays debugRays = DebugRays.OFF;
+
+    int operationsDone;
 
 
     public FullSuiteSorter() {
@@ -170,7 +172,7 @@ public class FullSuiteSorter {
                 waitForContainerScreenToRender(client);
                 break;
             case CLOSE_CONTAINER:
-                closeOpenContainer(client);
+                closeOpenContainer(client, screen);
                 break;
         }
 
@@ -188,6 +190,7 @@ public class FullSuiteSorter {
 
         state = State.BEGIN_NAVIGATE_TO_CONTAINER;
         placesToStand = null;
+        operationsDone = 0;
 
         // Update our stock reference from the sorter data.
         setAllContainersStockData(CurrInvClient.sorter);
@@ -228,6 +231,8 @@ public class FullSuiteSorter {
                     state = State.NEXT_CONTAINER;
                 }
             }
+        } else {
+            state = State.FINISH;
         }
     }
 
@@ -393,21 +398,30 @@ public class FullSuiteSorter {
             state = State.CLOSE_CONTAINER;
     }
 
-    private void closeOpenContainer(MinecraftClient client) {
-        assert client.player != null;
-        client.player.closeScreen();
-        if (client.currentScreen == null) {
-            state = State.NEXT_CONTAINER;
+    private void closeOpenContainer(MinecraftClient client, Screen screen) {
+        if (client.player != null) {
+            if (screen instanceof HandledScreen<?> handledScreen) {
+                client.player.closeHandledScreen();
+                if (currentContainer != null) {
+                    currentContainer.onClose(client.player);
+                }
+                if (client.currentScreen == null) {
+                    state = State.NEXT_CONTAINER;
+                }
+            }
         }
     }
 
     private void nextContainer(MinecraftClient client) {
-        closeOpenContainer(client);
         if (client.currentScreen == null) {
             placesToStand = null;
+            operationsDone++;
+
             currentContainer = containersToVisit.get();
             if (currentContainer == null) {
                 state = State.FINISH;
+            } else if (CurrInvClient.config.isContainerExemptFromSorting(currentContainer.getPos())) {
+                DebugUtility.print(client, "Container is exempt from sorting.");
             } else {
                 state = State.BEGIN_NAVIGATE_TO_CONTAINER;
             }
@@ -419,7 +433,7 @@ public class FullSuiteSorter {
 
         state = State.IDLE;
 
-        DebugUtility.print(MinecraftClient.getInstance(), "Full-suite sorter operation finished.");
+        DebugUtility.print(MinecraftClient.getInstance(), "Full-suite sorter operation finished. " + operationsDone + " operations.");
     }
 
     private void onStateChanged(MinecraftClient client) {

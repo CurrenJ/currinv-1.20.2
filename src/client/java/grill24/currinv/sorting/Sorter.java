@@ -62,7 +62,7 @@ public class Sorter {
 
     @ScreenTick
     public void onUpdate(MinecraftClient client, Screen screen) {
-        if (isEnabled && screen instanceof HandledScreen<?> handledScreen) {
+        if (isEnabled && screen instanceof HandledScreen<?> handledScreen && !CurrInvClient.config.isContainerExemptFromSorting(lastUsedContainerBlockPos)) {
             Optional<Inventory> screenInventoryOptional = SortingUtility.tryGetInventoryFromScreen(handledScreen);
             if (screenInventoryOptional.isPresent()) {
                 tryInventoryScreen(handledScreen);
@@ -104,7 +104,7 @@ public class Sorter {
     }
 
     private boolean tryInventoryInventory(Inventory inventory) {
-        if (isEnabled && !isSorting) {
+        if (isEnabled && !isSorting && !CurrInvClient.config.isContainerExemptFromSorting(lastUsedContainerBlockPos)) {
             Optional<ContainerStockData> containerStockDataOptional = tryGetStockData(lastUsedContainerBlockPos);
             if (containerStockDataOptional.isPresent() && containerStockDataOptional.get().isDirty()) {
                 ContainerStockData containerStockData = containerStockDataOptional.get();
@@ -265,6 +265,11 @@ public class Sorter {
         if (stockData.containsKey(blockPos))
             return Optional.of(stockData.get(blockPos));
         return Optional.empty();
+    }
+
+    public void removeData(BlockPos blockPos) {
+        if (stockData.containsKey(blockPos))
+            stockData.remove(blockPos);
     }
 
     public void onUseContainer(MinecraftClient client, LootableContainerBlockEntity containerBlockEntity) {
