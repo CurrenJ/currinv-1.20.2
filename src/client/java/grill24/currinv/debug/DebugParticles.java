@@ -18,10 +18,10 @@ import java.util.HashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
 
-@Command("debug")
+@Command(value = "debug", debug = true)
 public class DebugParticles {
 
-    @CommandOption("allParticlesEnabled")
+    @CommandOption(value = "allParticlesEnabled", debug = true)
     public static boolean isEnabled = true;
 
     public static final String NAVIGATION_PARTICLE_KEY = "navigation";

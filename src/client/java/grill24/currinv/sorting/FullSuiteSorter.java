@@ -2,6 +2,7 @@ package grill24.currinv.sorting;
 
 import com.mojang.brigadier.context.CommandContext;
 import grill24.currinv.CurrInvClient;
+import grill24.currinv.debug.CurrInvDebugRenderer;
 import grill24.currinv.debug.DebugParticles;
 import grill24.currinv.debug.DebugUtility;
 import grill24.currinv.navigation.NavigationUtility;
@@ -55,7 +56,7 @@ public class FullSuiteSorter {
         FINISH
     }
 
-    @CommandOption("state")
+    @CommandOption(value = "state", debug = true)
     private State state;
 
     private State lastState;
@@ -67,18 +68,18 @@ public class FullSuiteSorter {
 
     private IFullSuiteSorterMode mode;
 
-    @CommandOption("debug")
+    @CommandOption(value = "debug", debug = true)
     public boolean isDebugModeEnabled;
 
-    @CommandOption("debugParticles")
+    @CommandOption(value = "debugParticles", debug = true)
     public boolean isDebugParticlesEnabled;
 
-    @CommandOption("debugVerbose")
+    @CommandOption(value = "debugVerbose", debug = true)
     public boolean isDebugVerbose;
 
     public enum DebugRays {OFF, SUCCESS, FAIL, ALL}
 
-    @CommandOption(value = "debugRays")
+    @CommandOption(value = "debugRays", debug = true)
     public DebugRays debugRays = DebugRays.OFF;
 
     int operationsDone;
@@ -119,6 +120,27 @@ public class FullSuiteSorter {
         mode = new ConsolidateAndSortMode(MinecraftClient.getInstance());
 
         tryStart(commandContext);
+    }
+
+    @CommandAction("whereIs")
+    public void whereIs(MinecraftClient client, CommandContext<FabricClientCommandSource> commandContext, Item target) {
+        CurrInvClient.currInvDebugRenderer.isEnabled = true;
+        setAllContainersStockData(CurrInvClient.sorter);
+        Optional<ItemQuantityAndSlots> data = allContainersStockData.getItemStock(target);
+        data.ifPresent(itemQuantityAndSlots -> itemQuantityAndSlots.slotIds.forEach((blockPos, slots) -> {
+            BlockPos pos1 = SortingUtility.getOneBlockPosFromDoubleChests(client, blockPos, DoubleBlockProperties.Type.FIRST);
+            CurrInvClient.currInvDebugRenderer.addCube(pos1, 0, 10000, CurrInvDebugRenderer.GREEN);
+
+            BlockPos pos2 = SortingUtility.getOneBlockPosFromDoubleChests(client, blockPos, DoubleBlockProperties.Type.SECOND);
+            if (pos2 != pos1)
+                CurrInvClient.currInvDebugRenderer.addCube(pos2, 0, 10000, CurrInvDebugRenderer.GREEN);
+        }));
+
+        int count = 0;
+        if (data.isPresent())
+            count = data.get().slotIds.size();
+
+        DebugUtility.print(commandContext, "Found " + target.getName() + " in " + count + (count == 1 ? " container." : " containers."));
     }
 
     @ClientTick

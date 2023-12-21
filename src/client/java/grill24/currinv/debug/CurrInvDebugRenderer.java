@@ -17,7 +17,7 @@ import java.util.Collection;
 import java.util.List;
 import java.util.function.Function;
 
-@Command("debug")
+@Command(value = "debug", debug = true)
 public class CurrInvDebugRenderer implements DebugRenderer.Renderer {
     private record LineSegment(Vec3d a, Vec3d b, long expiryTime, int rgb) {
     }
@@ -31,7 +31,7 @@ public class CurrInvDebugRenderer implements DebugRenderer.Renderer {
     public static final int GREEN = MathHelper.packRgb(0, 1, 0);
     public static final int BLUE = MathHelper.packRgb(0, 0, 1);
 
-    @CommandOption("debugRenderer")
+    @CommandOption(value = "debugRenderer", debug = true)
     public boolean isEnabled = true;
 
     @Override

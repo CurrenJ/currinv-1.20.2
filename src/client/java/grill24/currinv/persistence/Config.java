@@ -25,20 +25,16 @@ public class Config extends grill24.sizzlib.persistence.Persistable {
     private final static MinecraftClient client = MinecraftClient.getInstance();
 
     @Persists
-    @CommandOption(readOnly = true)
+    @CommandOption(readOnly = true, debug = true)
     protected long biomeAccessSeed = -1;
 
     @Persists
-    @CommandOption(readOnly = true)
+    @CommandOption(readOnly = true, debug = true)
     protected HashMap<BlockPos, ContainerSortingConfiguration> sortingContainerConfigurations;
 
     @Persists
     @CommandOption
     public Sorter.SortingStyle currentSortingStyle = Sorter.SortingStyle.QUANTITY;
-
-    @Persists
-    @CommandOption
-    public BlockPos pos;
 
     @CommandOption("drawExemptContainers")
     public boolean shouldDrawSortingExemptContainers;

@@ -34,10 +34,10 @@ public class PlayerNavigator implements IClientPlayerController {
 
     public ClientPlayerController playerController;
 
-    @CommandOption("debugParticles")
+    @CommandOption(value = "debugParticles", debug = true)
     public boolean debugParticlesEnabled = false;
 
-    @CommandOption("debugLines")
+    @CommandOption(value = "debugLines", debug = true)
     public boolean debugLinesEnabled = false;
 
 

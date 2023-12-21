@@ -45,6 +45,8 @@ public class CurrInvClient implements ClientModInitializer {
         registerUseBlockEvents();
 
         modComponentRegistry = new ModComponentRegistry(CurrInvClient.class);
+        modComponentRegistry.setDebug(false);
+
         modComponentRegistry.registerComponent(CurrInvClient.navigator);
         modComponentRegistry.registerComponent(CurrInvClient.sorter);
         modComponentRegistry.registerComponent(CurrInvClient.fullSuiteSorter);
