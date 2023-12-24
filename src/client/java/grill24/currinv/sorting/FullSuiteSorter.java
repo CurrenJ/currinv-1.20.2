@@ -140,7 +140,7 @@ public class FullSuiteSorter {
         if (data.isPresent())
             count = data.get().slotIds.size();
 
-        DebugUtility.print(commandContext, "Found " + target.getName() + " in " + count + (count == 1 ? " container." : " containers."));
+        DebugUtility.print(commandContext, "Found " + target.getName().getString() + " in " + count + (count == 1 ? " container." : " containers."));
     }
 
     @ClientTick

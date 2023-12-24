@@ -1,7 +1,6 @@
 package grill24.currinv.sorting;
 
 import grill24.currinv.IDirtyFlag;
-import grill24.sizzlib.persistence.PersistenceManager;
 import net.minecraft.inventory.Inventory;
 import net.minecraft.item.Item;
 import net.minecraft.item.ItemStack;

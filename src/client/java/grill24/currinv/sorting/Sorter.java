@@ -46,9 +46,7 @@ public class Sorter implements IFileProvider {
 
     public enum SortingStyle {QUANTITY, LEXICOGRAPHICAL, CREATIVE_MENU}
 
-    public SortingStyle currentSortingStyle = SortingStyle.CREATIVE_MENU;
-
-    public HashMap<Item, Integer> creativeMenuOrder;
+    public transient HashMap<Item, Integer> creativeMenuOrder;
 
     public Sorter() {
         isEnabled = true;

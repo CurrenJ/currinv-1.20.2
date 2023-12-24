@@ -34,6 +34,7 @@ public class CurrInvClient implements ClientModInitializer {
     public static PlayerNavigator navigator;
     public static FullSuiteSorter fullSuiteSorter;
     public static CurrInvDebugRenderer currInvDebugRenderer;
+    public static PlayerTools playerTools;
 
     @Override
     public void onInitializeClient() {
@@ -81,9 +82,11 @@ public class CurrInvClient implements ClientModInitializer {
     public static void onBiomeAccessSeedChanged(long biomeAccessSeed) {
         config = new Config(biomeAccessSeed);
         sorter = new Sorter();
+        playerTools = new PlayerTools();
 
         modComponentRegistry.registerComponent(CurrInvClient.config);
         modComponentRegistry.registerComponent(CurrInvClient.sorter);
+        modComponentRegistry.registerComponent(CurrInvClient.playerTools);
         modComponentRegistry.registerComponents();
     }
 
