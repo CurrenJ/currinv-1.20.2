@@ -37,7 +37,6 @@ public class CurrInvClient implements ClientModInitializer {
 
     @Override
     public void onInitializeClient() {
-        sorter = new Sorter();
         navigator = new PlayerNavigator();
         fullSuiteSorter = new FullSuiteSorter();
         currInvDebugRenderer = new CurrInvDebugRenderer();
@@ -48,7 +47,6 @@ public class CurrInvClient implements ClientModInitializer {
         modComponentRegistry.setDebug(false);
 
         modComponentRegistry.registerComponent(CurrInvClient.navigator);
-        modComponentRegistry.registerComponent(CurrInvClient.sorter);
         modComponentRegistry.registerComponent(CurrInvClient.fullSuiteSorter);
         modComponentRegistry.registerComponent(DebugParticles.class);
         modComponentRegistry.registerComponent(CurrInvClient.currInvDebugRenderer);
@@ -76,11 +74,17 @@ public class CurrInvClient implements ClientModInitializer {
 
     public static void setBiomeAccessSeed(long biomeAccessSeed) {
         if (config == null || config.getBiomeAccessSeed() != biomeAccessSeed) {
-            config = new Config(biomeAccessSeed);
-
-            modComponentRegistry.registerComponent(CurrInvClient.config);
-            modComponentRegistry.registerComponents();
+            onBiomeAccessSeedChanged(biomeAccessSeed);
         }
+    }
+
+    public static void onBiomeAccessSeedChanged(long biomeAccessSeed) {
+        config = new Config(biomeAccessSeed);
+        sorter = new Sorter();
+
+        modComponentRegistry.registerComponent(CurrInvClient.config);
+        modComponentRegistry.registerComponent(CurrInvClient.sorter);
+        modComponentRegistry.registerComponents();
     }
 
     public static Path getAbsoluteDataDir() {

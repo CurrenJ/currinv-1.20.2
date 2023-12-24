@@ -2,10 +2,9 @@ package grill24.currinv.sorting;
 
 import grill24.currinv.CurrInvClient;
 import grill24.currinv.IDirtyFlag;
-import grill24.sizzlib.component.Command;
-import grill24.sizzlib.component.CommandOption;
-import grill24.sizzlib.component.ScreenInit;
-import grill24.sizzlib.component.ScreenTick;
+import grill24.sizzlib.component.*;
+import grill24.sizzlib.persistence.IFileProvider;
+import grill24.sizzlib.persistence.PersistenceManager;
 import net.minecraft.block.entity.LootableContainerBlockEntity;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.gui.screen.Screen;
@@ -19,26 +18,30 @@ import net.minecraft.registry.Registries;
 import net.minecraft.screen.ScreenHandler;
 import net.minecraft.screen.ScreenHandlerListener;
 import net.minecraft.screen.slot.SlotActionType;
+import net.minecraft.util.Identifier;
 import net.minecraft.util.math.BlockPos;
 
+import java.io.File;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Optional;
 import java.util.OptionalInt;
 
 @Command
-public class Sorter {
-    public boolean isEnabled, isSorting;
+public class Sorter implements IFileProvider {
+    public transient boolean isEnabled, isSorting;
 
     @CommandOption
     public boolean isSortingEnabled;
 
     @CommandOption
     public boolean isQuickStackEnabled;
-    private int currentSortingSlotId, currentStockIndex, currentStockSlotIdsIndex;
+    private transient int currentSortingSlotId, currentStockIndex, currentStockSlotIdsIndex;
 
-    public BlockPos lastUsedContainerBlockPos;
-    public HashMap<BlockPos, ContainerStockData> stockData;
+    public transient BlockPos lastUsedContainerBlockPos;
+
+    @CommandOption(readOnly = true)
+    public HashMap<Identifier, HashMap<BlockPos, ContainerStockData>> stockDataByDimension;
 
 
     public enum SortingStyle {QUANTITY, LEXICOGRAPHICAL, CREATIVE_MENU}
@@ -57,7 +60,9 @@ public class Sorter {
         currentStockIndex = 0;
         currentStockSlotIdsIndex = 0;
 
-        stockData = new HashMap<>();
+        stockDataByDimension = new HashMap<>();
+
+        PersistenceManager.load(this);
     }
 
     @ScreenTick
@@ -111,8 +116,13 @@ public class Sorter {
                 containerStockData.inventoryInventory(lastUsedContainerBlockPos, inventory);
             } else {
                 ContainerStockData containerStockData = new ContainerStockData(lastUsedContainerBlockPos, inventory);
+
+                Identifier dimension = MinecraftClient.getInstance().world.getDimensionKey().getValue();
+                HashMap<BlockPos, ContainerStockData> stockData = stockDataByDimension.getOrDefault(dimension, new HashMap<>());
                 stockData.put(lastUsedContainerBlockPos, containerStockData);
+                stockDataByDimension.put(dimension, stockData);
             }
+            PersistenceManager.save(this);
             return true;
         }
         return false;
@@ -262,14 +272,23 @@ public class Sorter {
     }
 
     public Optional<ContainerStockData> tryGetStockData(BlockPos blockPos) {
-        if (stockData.containsKey(blockPos))
-            return Optional.of(stockData.get(blockPos));
+        Identifier dimension = MinecraftClient.getInstance().world.getDimensionKey().getValue();
+        if (stockDataByDimension.containsKey(dimension)) {
+            HashMap<BlockPos, ContainerStockData> stockData = stockDataByDimension.get(dimension);
+            if (stockData.containsKey(blockPos))
+                return Optional.of(stockData.get(blockPos));
+        }
+
         return Optional.empty();
     }
 
     public void removeData(BlockPos blockPos) {
-        if (stockData.containsKey(blockPos))
-            stockData.remove(blockPos);
+        Identifier dimension = MinecraftClient.getInstance().world.getDimensionKey().getValue();
+        if (stockDataByDimension.containsKey(dimension)) {
+            HashMap<BlockPos, ContainerStockData> stockData = stockDataByDimension.get(dimension);
+            if (stockData.containsKey(blockPos))
+                stockData.remove(blockPos);
+        }
     }
 
     public void onUseContainer(MinecraftClient client, LootableContainerBlockEntity containerBlockEntity) {
@@ -299,6 +318,12 @@ public class Sorter {
                 creativeMenuOrder.put(item, i);
             }
         }
+    }
+
+    @Override
+    public File getFile() {
+        String name = ComponentUtility.convertDeclarationToCamel(getClass().getSimpleName()) + ".json";
+        return CurrInvClient.config.getWorldAssociatedFile(name);
     }
 
     public void markDirty() {

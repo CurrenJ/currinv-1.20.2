@@ -223,7 +223,7 @@ public class FullSuiteSorter {
 
     public void setAllContainersStockData(Sorter sorter) {
         ArrayList<ContainerStockData> data = new ArrayList<>();
-        CurrInvClient.sorter.stockData.forEach((key, value) -> data.add(value));
+        CurrInvClient.sorter.stockDataByDimension.getOrDefault(MinecraftClient.getInstance().world.getDimensionKey().getValue(), new HashMap<>()).forEach((key, value) -> data.add(value));
         allContainersStockData = new ContainerStockData(data);
     }
 

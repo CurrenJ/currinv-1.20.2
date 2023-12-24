@@ -8,8 +8,8 @@ import grill24.sizzlib.component.ClientTick;
 import grill24.sizzlib.component.Command;
 import grill24.sizzlib.component.CommandAction;
 import grill24.sizzlib.component.CommandOption;
+import grill24.sizzlib.persistence.IFileProvider;
 import grill24.sizzlib.persistence.PersistenceManager;
-import grill24.sizzlib.persistence.Persists;
 import net.minecraft.block.entity.LootableContainerBlockEntity;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.util.hit.BlockHitResult;
@@ -20,19 +20,16 @@ import java.util.HashMap;
 import java.util.Optional;
 
 @Command("config")
-public class Config extends grill24.sizzlib.persistence.Persistable {
-    private final static String DATA_FILE_NAME = "config.dat";
+public class Config implements IFileProvider {
+    private final static String DATA_FILE_NAME = "config.json";
     private final static MinecraftClient client = MinecraftClient.getInstance();
 
-    @Persists
     @CommandOption(readOnly = true, debug = true)
-    protected long biomeAccessSeed = -1;
+    protected transient long biomeAccessSeed = -1;
 
-    @Persists
     @CommandOption(readOnly = true, debug = true)
     protected HashMap<BlockPos, ContainerSortingConfiguration> sortingContainerConfigurations;
 
-    @Persists
     @CommandOption
     public Sorter.SortingStyle currentSortingStyle = Sorter.SortingStyle.QUANTITY;
 
@@ -88,9 +85,13 @@ public class Config extends grill24.sizzlib.persistence.Persistable {
 
     @Override
     public File getFile() {
-        String[] tokens = DATA_FILE_NAME.split("\\.");
-        String fileName = String.format("%s_%s.%s", tokens[0], this.biomeAccessSeed, tokens[1]);
-        return CurrInvClient.getFileInDataDir(fileName);
+        return getWorldAssociatedFile(DATA_FILE_NAME);
+    }
+
+    public File getWorldAssociatedFile(String fileName) {
+        String[] tokens = fileName.split("\\.");
+        String fullFileName = String.format("%s_%s.%s", tokens[0], this.biomeAccessSeed, tokens[1]);
+        return CurrInvClient.getFileInDataDir(fullFileName);
     }
 
     public long getBiomeAccessSeed() {

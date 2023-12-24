@@ -1,6 +1,7 @@
 package grill24.currinv.sorting;
 
 import grill24.currinv.IDirtyFlag;
+import grill24.sizzlib.persistence.PersistenceManager;
 import net.minecraft.inventory.Inventory;
 import net.minecraft.item.Item;
 import net.minecraft.item.ItemStack;
@@ -11,7 +12,7 @@ import java.util.*;
 public class ContainerStockData implements IDirtyFlag {
     private final HashMap<Item, ItemQuantityAndSlots> stock;
     private final ArrayList<ItemQuantityAndSlots> orderedStock;
-    private boolean isDirty;
+    private transient boolean isDirty;
 
     ContainerStockData() {
         isDirty = false;
