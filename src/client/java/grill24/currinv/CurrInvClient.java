@@ -38,19 +38,27 @@ public class CurrInvClient implements ClientModInitializer {
 
     @Override
     public void onInitializeClient() {
+        modComponentRegistry = new ModComponentRegistry(CurrInvClient.class);
+        modComponentRegistry.setDebug(true);
+
+        registerUseBlockEvents();
+    }
+
+    private static void registerComponents() {
+        sorter = new Sorter();
+        playerTools = new PlayerTools();
         navigator = new PlayerNavigator();
         fullSuiteSorter = new FullSuiteSorter();
         currInvDebugRenderer = new CurrInvDebugRenderer();
 
-        registerUseBlockEvents();
-
-        modComponentRegistry = new ModComponentRegistry(CurrInvClient.class);
-        modComponentRegistry.setDebug(false);
-
+        modComponentRegistry.registerComponent(CurrInvClient.sorter);
+        modComponentRegistry.registerComponent(CurrInvClient.playerTools);
         modComponentRegistry.registerComponent(CurrInvClient.navigator);
         modComponentRegistry.registerComponent(CurrInvClient.fullSuiteSorter);
         modComponentRegistry.registerComponent(DebugParticles.class);
         modComponentRegistry.registerComponent(CurrInvClient.currInvDebugRenderer);
+
+        modComponentRegistry.registerComponents();
     }
 
     public static void registerUseBlockEvents() {
@@ -81,13 +89,9 @@ public class CurrInvClient implements ClientModInitializer {
 
     public static void onBiomeAccessSeedChanged(long biomeAccessSeed) {
         config = new Config(biomeAccessSeed);
-        sorter = new Sorter();
-        playerTools = new PlayerTools();
-
         modComponentRegistry.registerComponent(CurrInvClient.config);
-        modComponentRegistry.registerComponent(CurrInvClient.sorter);
-        modComponentRegistry.registerComponent(CurrInvClient.playerTools);
-        modComponentRegistry.registerComponents();
+
+        registerComponents();
     }
 
     public static Path getAbsoluteDataDir() {

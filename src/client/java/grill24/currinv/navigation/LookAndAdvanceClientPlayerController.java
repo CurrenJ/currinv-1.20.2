@@ -75,7 +75,9 @@ public class LookAndAdvanceClientPlayerController extends ClientPlayerController
             BlockPos diagonal2 = new BlockPos(nextNode.getX(), currentNode.getY(), currentNode.getZ());
             if (!nextNodeIsAbove) {
                 // Logic for jumping over diagonal waist-high "hurdles"
-                nextNodeIsAbove = !NavigationUtility.canPathfindThrough(world, diagonal1) && !NavigationUtility.canPathfindThrough(world, diagonal2);
+                boolean d1 = NavigationUtility.hasSpaceForPlayerToStandAtBlockPos(world, player, diagonal1);
+                boolean d2 = NavigationUtility.hasSpaceForPlayerToStandAtBlockPos(world, player, diagonal2);
+                nextNodeIsAbove = !d1 && !d2;
             } else {
                 // Weird logic for specific cave escaping
                 boolean isPitfall = NavigationUtility.hasSpaceForPlayerToStandAtBlockPos(world, player, diagonal1, 1) ||

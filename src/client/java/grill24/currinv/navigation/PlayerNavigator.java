@@ -1,6 +1,7 @@
 package grill24.currinv.navigation;
 
 import grill24.currinv.CurrInvClient;
+import grill24.currinv.debug.CurrInvDebugRenderer;
 import grill24.currinv.debug.DebugParticles;
 import grill24.currinv.debug.DebugUtility;
 import grill24.sizzlib.component.ClientTick;
@@ -20,6 +21,7 @@ import org.joml.Vector2d;
 
 import java.util.List;
 import java.util.Optional;
+import java.util.Random;
 
 @Command("nav")
 public class PlayerNavigator implements IClientPlayerController {
@@ -163,14 +165,20 @@ public class PlayerNavigator implements IClientPlayerController {
     public void navigateEscapeRope(MinecraftClient client) {
         if (client.world != null && client.player != null) {
             BlockPos playerPos = client.player.getBlockPos();
+            Random random = new Random();
 
-            for (int y = 320; y > playerPos.getY(); y--) {
-                BlockPos searchPos = new BlockPos(playerPos.getX(), y, playerPos.getZ());
-                Block block = client.world.getBlockState(searchPos).getBlock();
-                if (!(client.world.isAir(searchPos) || block instanceof LeavesBlock)) {
-                    startNavigationToPosition(client.player.getBlockPos(), searchPos.up(), true);
-                    break;
+            int numAttempts = 10;
+            for(int i = 0; i < numAttempts; i++) {
+                for (int y = 320; y > playerPos.getY(); y--) {
+                    BlockPos searchPos = new BlockPos(playerPos.getX(), y, playerPos.getZ());
+                    Block block = client.world.getBlockState(searchPos).getBlock();
+                    if (!(NavigationUtility.canPathfindThrough(client.world, searchPos) || block instanceof LeavesBlock) && NavigationUtility.hasSpaceForPlayerToStandAtBlockPos(client.world, client.player, searchPos.up())) {
+                        startNavigationToPosition(client.player.getBlockPos(), searchPos.up(), true, 5000);
+                        CurrInvClient.currInvDebugRenderer.addCube(searchPos, 0, 10000, CurrInvDebugRenderer.BLUE);
+                        return;
+                    }
                 }
+                playerPos = playerPos.add(random.nextInt(-2, 2), 0, random.nextInt(-2, 2));
             }
         }
     }
