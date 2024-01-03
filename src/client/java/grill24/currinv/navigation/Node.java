@@ -90,7 +90,7 @@ public class Node {
                     y--;
                 }
 
-                if (NavigationUtility.canPlayerStandOnBlockBelow(world, player, neighbor) && NavigationUtility.canPathfindThrough(world, neighbor))
+                if (NavigationUtility.canPlayerStandOnBlockBelow(world, player, neighbor) && NavigationUtility.canPathfindThrough(world, neighbor) && NavigationUtility.canPlayerMoveBetween(world, player, pos, neighbor))
                     neighbors.add(new Node(neighbor));
             } else {
                 // Check upwards (1 block up) (for ladders)

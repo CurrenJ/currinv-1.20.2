@@ -31,6 +31,7 @@ import net.minecraft.util.hit.BlockHitResult;
 import net.minecraft.util.hit.EntityHitResult;
 import net.minecraft.util.hit.HitResult;
 import net.minecraft.util.math.BlockPos;
+import net.minecraft.util.math.Vec2f;
 import org.joml.Vector2d;
 
 import java.util.*;
@@ -297,12 +298,12 @@ public class FullSuiteSorter {
         if (client.player != null && currentContainer != null && lookRadius < 20) {
             float lerpFactor = 0.8f;
 
-            Vector2d pitchAndYaw = NavigationUtility.getPitchAndYawToLookTowardsBlockFace(client.world, client.player, currentContainer.getPos());
-            float yaw = (float) pitchAndYaw.y;
+            Vec2f pitchAndYaw = NavigationUtility.getPitchAndYawToLookTowardsBlockFace(client.world, client.player, currentContainer.getPos());
+            float yaw = pitchAndYaw.y;
             yaw += (float) (Math.sin(angle) * lookRadius);
             client.player.setYaw(NavigationUtility.angleLerp(client.player.getYaw(), yaw, lerpFactor));
 
-            float pitch = (float) pitchAndYaw.x;
+            float pitch = pitchAndYaw.x;
             pitch += (float) (Math.cos(angle) * lookRadius);
             client.player.setPitch(NavigationUtility.angleLerp(client.player.getPitch(), pitch, lerpFactor));
 

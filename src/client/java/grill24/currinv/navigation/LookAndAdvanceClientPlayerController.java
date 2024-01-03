@@ -8,11 +8,12 @@ import net.minecraft.client.option.GameOptions;
 import net.minecraft.client.world.ClientWorld;
 import net.minecraft.registry.tag.FluidTags;
 import net.minecraft.util.math.BlockPos;
+import net.minecraft.util.math.Vec2f;
 import net.minecraft.util.math.Vec3d;
 import org.joml.Vector2d;
 
 public class LookAndAdvanceClientPlayerController extends ClientPlayerController {
-    public Vector2d desiredPitchAndYaw;
+    public Vec2f desiredPitchAndYaw;
     public boolean shouldJump;
     public boolean isOnGround;
     public boolean isInWater;
@@ -20,15 +21,20 @@ public class LookAndAdvanceClientPlayerController extends ClientPlayerController
     public boolean isNextNodeBelowPlayer;
 
     public float movementSpeedForward;
+    public long lastUpdateTimestamp;
+    public float dT;
 
 
     public LookAndAdvanceClientPlayerController(NavigationData navigationData) {
         super(navigationData);
-        desiredPitchAndYaw = new Vector2d();
+        desiredPitchAndYaw = new Vec2f(0,0);
     }
 
     @Override
     public void onUpdate(MinecraftClient client) {
+        dT = (System.currentTimeMillis() - lastUpdateTimestamp) / 1000f;
+        lastUpdateTimestamp = System.currentTimeMillis();
+
         if (CurrInvClient.navigator.isNavigating() && client.player != null && client.world != null) {
             ClientWorld world = client.world;
             ClientPlayerEntity player = client.player;
@@ -65,9 +71,13 @@ public class LookAndAdvanceClientPlayerController extends ClientPlayerController
         BlockPos currentNode = navigationData.getCurrentNode();
         BlockPos nextNode = navigationData.getNextNode();
 
-        boolean nextNodeIsAbove = nextNode.getY() > player.getPos().getY() + player.getStepHeight() || nextNode.getY() > currentNode.getY();
+        float dY = NavigationUtility.getStandingHeightDifference(world, currentNode, nextNode);
+
+        boolean nextNodeIsAbove = (dY > 0 && dY <= player.getStepHeight()) || nextNode.getY() > currentNode.getY();
+
         boolean shouldAscendInWater = isInWater && nextNode.getY() > player.getPos().getY();
         boolean shouldAscendOnLadder = world.getBlockState(currentNode).getBlock().equals(Blocks.LADDER) && nextNode.getY() > player.getPos().getY();
+        boolean shouldJumpOnLand = !isInWater && !shouldAscendOnLadder && nextNodeIsAbove && dY > player.getStepHeight();
 
         boolean isDiagonal = !NavigationUtility.isDirectlyAdjacent(currentNode, nextNode);
         if (isDiagonal) {
@@ -77,18 +87,18 @@ public class LookAndAdvanceClientPlayerController extends ClientPlayerController
                 // Logic for jumping over diagonal waist-high "hurdles"
                 boolean d1 = NavigationUtility.hasSpaceForPlayerToStandAtBlockPos(world, player, diagonal1);
                 boolean d2 = NavigationUtility.hasSpaceForPlayerToStandAtBlockPos(world, player, diagonal2);
-                nextNodeIsAbove = !d1 && !d2;
+                shouldJumpOnLand = !d1 && !d2;
             } else {
                 // Weird logic for specific cave escaping
                 boolean isPitfall = NavigationUtility.hasSpaceForPlayerToStandAtBlockPos(world, player, diagonal1, 1) ||
                         NavigationUtility.hasSpaceForPlayerToStandAtBlockPos(world, player, diagonal2, 1);
                 if (isPitfall) {
                     boolean diagonalPitfallShouldJump = !player.getBlockPos().equals(navigationData.getCurrentNode());
-                    nextNodeIsAbove = diagonalPitfallShouldJump;
+                    shouldJumpOnLand = diagonalPitfallShouldJump && shouldJumpOnLand;
                 } else {
                     boolean hasHeadroom = world.getBlockState(player.getBlockPos().up()).getCollisionShape(world, player.getBlockPos().up()).isEmpty()
                             && currentNode.toCenterPos().subtract(0, 0.5, 0).distanceTo(player.getPos()) < 0.25f;
-                    nextNodeIsAbove = hasHeadroom;
+                    shouldJumpOnLand = hasHeadroom && shouldJumpOnLand;
                 }
             }
         }
@@ -96,7 +106,7 @@ public class LookAndAdvanceClientPlayerController extends ClientPlayerController
         if (isInWater)
             return shouldAscendInWater;
 
-        return nextNodeIsAbove || shouldAscendInWater || shouldAscendOnLadder;
+        return shouldJumpOnLand || shouldAscendInWater || shouldAscendOnLadder;
     }
 
     @Override
@@ -142,10 +152,12 @@ public class LookAndAdvanceClientPlayerController extends ClientPlayerController
     @Override
     public Vector2d getPitchAndYaw(Vector2d pitchAndYaw, ClientPlayerEntity player) {
         if (CurrInvClient.navigator.isNavigating()) {
-            float lerpFactor = 0.1f;
+            float lerpFactor = dT * 2;
 
             float yaw = NavigationUtility.angleLerp(player.getYaw(), (float) desiredPitchAndYaw.y, lerpFactor);
             float pitch = NavigationUtility.angleLerp(player.getPitch(), (float) desiredPitchAndYaw.x, lerpFactor);
+
+            System.out.println("yaw: " + desiredPitchAndYaw.y + " | " + "pitch: " + desiredPitchAndYaw.x);
 
             return new Vector2d(pitch, yaw);
         } else {
@@ -153,12 +165,7 @@ public class LookAndAdvanceClientPlayerController extends ClientPlayerController
         }
     }
 
-    private Vector2d calculateDesiredPitchAndYaw(ClientPlayerEntity player) {
-        // This is to stop the yaw from rapidly spinning when we are directly above the next node but haven't reached it.
-        // E.g. sinking in water
-//        if(!isOnGround && !shouldJump && isNextNodeBelowCurrentNode)
-//            return desiredPitchAndYaw;
-
+    private Vec2f calculateDesiredPitchAndYaw(ClientPlayerEntity player) {
         Vec3d playerBodyPos = player.getPos();
         Vec3d playerHeadPos = new Vec3d(playerBodyPos.x, player.getEyeY(), playerBodyPos.z);
         Vec3d target = navigationData.getNextNode().toCenterPos().subtract(0, 0.5, 0);
@@ -167,13 +174,9 @@ public class LookAndAdvanceClientPlayerController extends ClientPlayerController
         double yaw = (float) (Math.toDegrees(Math.atan2(v.getZ(), v.getX())) - 90.0f);
 
         double pitch = Math.toDegrees(-Math.atan2(v.getY(), Math.sqrt(Math.pow(v.getX(), 2) + Math.pow(v.getZ(), 2))));
-//        if(!shouldJump && isOnGround) {
         pitch = Math.max(-15, pitch);
         pitch = Math.min(15, pitch);
-//        }
 
-//        System.out.println("target: " + navigationData.getNextNode() + " | " + "player: " + player.getPos() + " | " + yaw);
-
-        return new Vector2d(pitch, yaw);
+        return new Vec2f(NavigationUtility.normalizeAngle((float) pitch), NavigationUtility.normalizeAngle((float) yaw));
     }
 }

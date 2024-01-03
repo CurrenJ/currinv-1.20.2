@@ -4,6 +4,7 @@ import grill24.currinv.CurrInvClient;
 import grill24.currinv.debug.CurrInvDebugRenderer;
 import grill24.currinv.sorting.FullSuiteSorter;
 import net.minecraft.block.*;
+import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.network.ClientPlayerEntity;
 import net.minecraft.client.network.ClientPlayerInteractionManager;
 import net.minecraft.client.world.ClientWorld;
@@ -11,10 +12,7 @@ import net.minecraft.entity.ai.pathing.NavigationType;
 import net.minecraft.registry.tag.BlockTags;
 import net.minecraft.registry.tag.FluidTags;
 import net.minecraft.util.hit.BlockHitResult;
-import net.minecraft.util.math.BlockPos;
-import net.minecraft.util.math.Direction;
-import net.minecraft.util.math.Vec3d;
-import net.minecraft.util.math.Vec3i;
+import net.minecraft.util.math.*;
 import net.minecraft.util.shape.VoxelShape;
 import org.joml.Vector2d;
 
@@ -45,11 +43,17 @@ public class NavigationUtility {
                         && isNotLava(world, diagonal2) && isNotLava(world, diagonal2.up());
                 boolean spaceForPlayerAboveDiagonal1 = hasSpaceForPlayerToStandAtBlockPos(world, player, diagonal1);
                 boolean spaceForPlayerAboveDiagonal2 = hasSpaceForPlayerToStandAtBlockPos(world, player, diagonal2);
-                return spaceForPlayerAboveToPos && noLava
+
+
+                boolean valid = spaceForPlayerAboveToPos && noLava
                         && (spaceForPlayerAboveDiagonal1 && spaceForPlayerAboveDiagonal2);
+                if(to.getX() == -450 && to.getZ() == 235 && valid)
+                    System.currentTimeMillis();
+                return valid;
             }
         } else if (to.getY() == from.getY() + 1) {
-            boolean canJumpTo = canPathfindThrough(world, from.up(2));
+            boolean canJumpTo = canPathfindThrough(world, from.up(2)) && getStandingHeightDifference(world, from, to) <= 1.25;
+
             if (isDirectlyAdjacent(from, to)) {
                 return spaceForPlayerAboveToPos && canJumpTo;
             } else {
@@ -190,7 +194,7 @@ public class NavigationUtility {
         return cardinals;
     }
 
-    public static Vector2d getPitchAndYawToLookTowardsBlockFace(ClientWorld world, ClientPlayerEntity player, BlockPos pos) {
+    public static Vec2f getPitchAndYawToLookTowardsBlockFace(ClientWorld world, ClientPlayerEntity player, BlockPos pos) {
         Vec3d playerBodyPos = player.getPos();
         Vec3d playerHeadPos = new Vec3d(playerBodyPos.x, player.getEyeY(), playerBodyPos.z);
 
@@ -201,7 +205,7 @@ public class NavigationUtility {
 
         double pitch = Math.toDegrees(-Math.atan2(v.getY(), Math.sqrt(Math.pow(v.getX(), 2) + Math.pow(v.getZ(), 2))));
 
-        return new Vector2d(normalizeAngle(pitch), normalizeAngle(yaw));
+        return new Vec2f(normalizeAngle((float) pitch), normalizeAngle((float) yaw));
     }
 
     public static Vec3d getBlockFaceToLookTowards(ClientWorld world, ClientPlayerEntity player, BlockPos to) {
@@ -253,16 +257,37 @@ public class NavigationUtility {
     }
 
     protected static float normalizeAngle(float yaw) {
-        return (yaw + 180) % 360 - 180;
+        yaw = mod(yaw, 360); // Wrap angle to [0, 360)
+        if (yaw >= 180) {
+            yaw -= 360; // Map angle to [-180, 180)
+        }
+        return yaw;
     }
 
-    protected static double normalizeAngle(double yaw) {
-        return (yaw + 180) % 360 - 180;
+    // Custom modulo function to handle negative numbers
+    private static float mod(float x, float y) {
+        return (x % y + y) % y;
     }
 
-    public static float angleLerp(float a, float b, float t) {
-        float normalizedA = NavigationUtility.normalizeAngle(a);
-        float normalizedB = NavigationUtility.normalizeAngle(b);
-        return NavigationUtility.normalizeAngle(normalizedA + (NavigationUtility.normalizeAngle(normalizedB - normalizedA) * t));
+    public static float shortestAngularDistance(float start, float end) {
+        float difference = end - start;
+        return mod((difference + 180), 360) - 180;
+    }
+
+    public static float angleLerp(float start, float end, float t) {
+        // Calculate the shortest angular distance
+        float shortestDistance = shortestAngularDistance(start, end);
+
+        // Perform linear interpolation
+        float resultYaw = start + t * shortestDistance;
+
+        // Normalize the result again
+        return normalizeAngle(resultYaw);
+    }
+
+    public static float getStandingHeightDifference(ClientWorld world, BlockPos from, BlockPos to) {
+        double fromBlockMaxHeight = world.getBlockState(from.down()).getCollisionShape(world, from).getMax(Direction.Axis.Y) + from.getY();
+        double toBlockMaxHeight = world.getBlockState(to.down()).getCollisionShape(world, to).getMax(Direction.Axis.Y) + to.getY();
+        return (float) (toBlockMaxHeight - fromBlockMaxHeight);
     }
 }
