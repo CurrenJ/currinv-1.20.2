@@ -30,8 +30,6 @@ public class PlayerNavigator implements IClientPlayerController {
 
     AStarAsyncMinecraft pathfinder;
 
-    public Block markerBlock = Blocks.CHISELED_NETHER_BRICKS;
-
     public NavigationData navigationData;
 
     public ClientPlayerController playerController;
@@ -102,7 +100,7 @@ public class PlayerNavigator implements IClientPlayerController {
     }
 
     @CommandAction("toMarker")
-    public void navigateToMarker(MinecraftClient client) {
+    public void navigateToMarker(MinecraftClient client, Block markerBlock) {
         if (client.world != null && client.player != null) {
             navigateToMarker(client.world, client.player, markerBlock);
         }

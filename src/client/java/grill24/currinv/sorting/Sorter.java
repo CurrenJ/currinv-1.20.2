@@ -40,7 +40,7 @@ public class Sorter implements IFileProvider {
 
     public transient BlockPos lastUsedContainerBlockPos;
 
-    @CommandOption(readOnly = true)
+    @CommandOption(readOnly = true, debug = true)
     public HashMap<Identifier, HashMap<BlockPos, ContainerStockData>> stockDataByDimension;
 
 

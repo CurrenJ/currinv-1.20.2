@@ -46,7 +46,7 @@ dependencies {
 
 	// modImplementation "net.fabricmc.fabric-api:fabric-api-deprecated:${project.fabric_version}"
 
-	modImplementation("com.github.CurrenJ:sizzlib:906016ff3a")
+	modImplementation("com.github.CurrenJ:sizzlib:55ff5008cb")
 }
 
 processResources {
