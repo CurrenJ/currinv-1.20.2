@@ -1,6 +1,6 @@
 # CurrInv
 
-SizzLib is a client-side mod that provides autonomous tools for better storage management, as well as complimentary navigation features.
+CurrInv is a client-side mod that provides autonomous tools for better storage management, as well as complimentary navigation features.
 Users can activate the mod's features by entering commands into the chat window.
 
 ## Storage Management
