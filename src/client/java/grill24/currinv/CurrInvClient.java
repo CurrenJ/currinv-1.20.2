@@ -39,7 +39,7 @@ public class CurrInvClient implements ClientModInitializer {
     @Override
     public void onInitializeClient() {
         modComponentRegistry = new ModComponentRegistry(CurrInvClient.class);
-        modComponentRegistry.setDebug(true);
+        modComponentRegistry.setDebug(false);
 
         registerUseBlockEvents();
     }

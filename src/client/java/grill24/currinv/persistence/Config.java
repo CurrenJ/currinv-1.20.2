@@ -57,7 +57,7 @@ public class Config implements IFileProvider {
             BlockPos pos = blockHitResult.getBlockPos().toImmutable();
             if (client.world != null && client.world.getBlockEntity(pos) instanceof LootableContainerBlockEntity) {
                 ContainerSortingConfiguration containerSortingConfiguration = sortingContainerConfigurations.getOrDefault(pos, new ContainerSortingConfiguration());
-                containerSortingConfiguration.isExempt = true;
+                containerSortingConfiguration.isExempt = !containerSortingConfiguration.isExempt;
                 setSortingContainerConfiguration(pos, containerSortingConfiguration);
 
                 CurrInvClient.sorter.removeData(pos);

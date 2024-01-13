@@ -32,7 +32,6 @@ import net.minecraft.util.hit.EntityHitResult;
 import net.minecraft.util.hit.HitResult;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.Vec2f;
-import org.joml.Vector2d;
 
 import java.util.*;
 import java.util.function.BooleanSupplier;

@@ -27,7 +27,7 @@ public class LookAndAdvanceClientPlayerController extends ClientPlayerController
 
     public LookAndAdvanceClientPlayerController(NavigationData navigationData) {
         super(navigationData);
-        desiredPitchAndYaw = new Vec2f(0,0);
+        desiredPitchAndYaw = new Vec2f(0, 0);
     }
 
     @Override

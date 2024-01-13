@@ -9,7 +9,6 @@ import grill24.sizzlib.component.Command;
 import grill24.sizzlib.component.CommandAction;
 import grill24.sizzlib.component.CommandOption;
 import net.minecraft.block.Block;
-import net.minecraft.block.Blocks;
 import net.minecraft.block.LeavesBlock;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.network.ClientPlayerEntity;
@@ -99,6 +98,11 @@ public class PlayerNavigator implements IClientPlayerController {
         playerController = new LookAndAdvanceClientPlayerController(navigationData);
     }
 
+    @CommandAction("toSurfacePos")
+    public void navigateToPosition(MinecraftClient client, BlockPos goal) {
+        navigateEscapeRope(client, goal.withY(-64));
+    }
+
     @CommandAction("toMarker")
     public void navigateToMarker(MinecraftClient client, Block markerBlock) {
         if (client.world != null && client.player != null) {
@@ -162,13 +166,19 @@ public class PlayerNavigator implements IClientPlayerController {
     @CommandAction("escapeRope")
     public void navigateEscapeRope(MinecraftClient client) {
         if (client.world != null && client.player != null) {
-            BlockPos playerPos = client.player.getBlockPos();
+            navigateEscapeRope(client, client.player.getBlockPos());
+        }
+    }
+
+    public void navigateEscapeRope(MinecraftClient client, BlockPos position) {
+        if (client.world != null && client.player != null) {
             Random random = new Random();
 
+            // Try a few times to find an eligible surface position.
             int numAttempts = 10;
-            for(int i = 0; i < numAttempts; i++) {
-                for (int y = 320; y > playerPos.getY(); y--) {
-                    BlockPos searchPos = new BlockPos(playerPos.getX(), y, playerPos.getZ());
+            for (int i = 0; i < numAttempts; i++) {
+                for (int y = 320; y > position.getY(); y--) {
+                    BlockPos searchPos = new BlockPos(position.getX(), y, position.getZ());
                     Block block = client.world.getBlockState(searchPos).getBlock();
                     if (!(NavigationUtility.canPathfindThrough(client.world, searchPos) || block instanceof LeavesBlock) && NavigationUtility.hasSpaceForPlayerToStandAtBlockPos(client.world, client.player, searchPos.up())) {
                         startNavigationToPosition(client.player.getBlockPos(), searchPos.up(), true, 5000);
@@ -176,7 +186,7 @@ public class PlayerNavigator implements IClientPlayerController {
                         return;
                     }
                 }
-                playerPos = playerPos.add(random.nextInt(-2, 2), 0, random.nextInt(-2, 2));
+                position = position.add(random.nextInt(-2, 2), 0, random.nextInt(-2, 2));
             }
         }
     }

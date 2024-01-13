@@ -4,7 +4,6 @@ import grill24.currinv.CurrInvClient;
 import grill24.currinv.debug.CurrInvDebugRenderer;
 import grill24.currinv.sorting.FullSuiteSorter;
 import net.minecraft.block.*;
-import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.network.ClientPlayerEntity;
 import net.minecraft.client.network.ClientPlayerInteractionManager;
 import net.minecraft.client.world.ClientWorld;
@@ -14,7 +13,6 @@ import net.minecraft.registry.tag.FluidTags;
 import net.minecraft.util.hit.BlockHitResult;
 import net.minecraft.util.math.*;
 import net.minecraft.util.shape.VoxelShape;
-import org.joml.Vector2d;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -47,7 +45,7 @@ public class NavigationUtility {
 
                 boolean valid = spaceForPlayerAboveToPos && noLava
                         && (spaceForPlayerAboveDiagonal1 && spaceForPlayerAboveDiagonal2);
-                if(to.getX() == -450 && to.getZ() == 235 && valid)
+                if (to.getX() == -450 && to.getZ() == 235 && valid)
                     System.currentTimeMillis();
                 return valid;
             }
